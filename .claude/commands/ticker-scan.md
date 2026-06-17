@@ -1,15 +1,15 @@
-# chen-scan
+# ticker-scan
 
-用 Chen Yun 方法论（`wiki/frameworks/chen-yun-method.md`）在七大结构性赛道中发现翻倍股/多倍股候选。三阶段漏斗：2A 九大特征 → 2B 六大类型×五大公式 → 2C 五大标准快速核查。量化指标由 `scripts/chen_scan.py`（yfinance）提供，定性判断由 LLM 完成，backlog 和新股发现通过 WebSearch。
+用 热门赛道热门股选择方法论（`wiki/frameworks/hot-sector-method.md`）在七大结构性赛道中发现翻倍股/多倍股候选。三阶段漏斗：2A 九大特征 → 2B 六大类型×五大公式 → 2C 五大标准快速核查。量化指标由 `scripts/ticker_scan.py`（yfinance）提供，定性判断由 LLM 完成，backlog 和新股发现通过 WebSearch。
 
 ## Arguments
 
 ```
-/chen-scan                              # 发现模式：扫全部七大赛道
-/chen-scan <赛道>                       # 赛道聚焦：如 光互连 / optical / 矿产资源
-/chen-scan <TICKER>                     # 单股验证：对指定股票跑完整 2A/2B/2C 评分
-/chen-scan <赛道> --tickers T1 T2       # 赛道基础池 + 自定义追加
-/chen-scan --tickers T1 T2 T3          # 自定义池（直接进 Stage 2）
+/ticker-scan                              # 发现模式：扫全部七大赛道
+/ticker-scan <赛道>                       # 赛道聚焦：如 光互连 / optical / 矿产资源
+/ticker-scan <TICKER>                     # 单股验证：对指定股票跑完整 2A/2B/2C 评分
+/ticker-scan <赛道> --tickers T1 T2       # 赛道基础池 + 自定义追加
+/ticker-scan --tickers T1 T2 T3          # 自定义池（直接进 Stage 2）
 ```
 
 ## 赛道名称映射表（用于模式检测和文件命名）
@@ -73,10 +73,10 @@ WebSearch: "[sector keyword] small cap stock NYSE Nasdaq 2025 2026 growth"
 
 ---
 
-### 2. Stage 0 — 运行 chen_scan.py（批量拉取量化数据）
+### 2. Stage 0 — 运行 ticker_scan.py（批量拉取量化数据）
 
 ```bash
-python scripts/chen_scan.py <全部候选 ticker> --json
+python scripts/ticker_scan.py <全部候选 ticker> --json
 ```
 
 解析每行 JSON，存入 `scan_data` dict（key = ticker）。
@@ -172,7 +172,7 @@ python scripts/chen_scan.py <全部候选 ticker> --json
 **输出格式：**
 
 ```
-## /chen-scan [赛道|ALL] — YYYY-MM-DD
+## /ticker-scan [赛道|ALL] — YYYY-MM-DD
 
 候选池：N 只（Chen点名 X + 新发现 Y + --tickers Z）
 Stage 1 通过：N 只 | Stage 2 通过：N 只 | Stage 3 评估：N 只
@@ -209,14 +209,14 @@ Stage 1 通过：N 只 | Stage 2 通过：N 只 | Stage 3 评估：N 只
 
 **赛道空白信号：** 本赛道是否存在 Chen 尚未点名但值得跟踪的潜力标的？（如有，列出；如无，写"暂无明显空白"）
 
-**下一步行动：** `/stock-analyze <TICKER>` 对 🔥/⭐ 做完整 15 节论文；👀 等触发条件后再跑 `/chen-scan <TICKER>` 单股验证
+**下一步行动：** `/stock-analyze <TICKER>` 对 🔥/⭐ 做完整 15 节论文；👀 等触发条件后再跑 `/ticker-scan <TICKER>` 单股验证
 ```
 
 ---
 
 ### 7. 保存输出文件
 
-**路径：** `outputs/chen-scan/YYYY-MM-DD-[SECTOR_EN|ALL|TICKER].md`
+**路径：** `outputs/ticker-scan/YYYY-MM-DD-[SECTOR_EN|ALL|TICKER].md`
 
 - `SECTOR_EN` 用映射表中的英文 ID（optical / storage / satellite / grid / packaging / minerals / realestate）
 - single-stock mode → 用 ticker 名（如 `2026-06-15-GCTS.md`）
@@ -226,7 +226,7 @@ Stage 1 通过：N 只 | Stage 2 通过：N 只 | Stage 3 评估：N 只
 **文件结构（固定顺序）：**
 
 ```
-# /chen-scan [赛道] — YYYY-MM-DD
+# /ticker-scan [赛道] — YYYY-MM-DD
 
 [综合排名表]
 [Stage 1/2 筛除表]
@@ -237,7 +237,7 @@ Stage 1 通过：N 只 | Stage 2 通过：N 只 | Stage 3 评估：N 只
 
 ## 中间分析过程（完整记录）
 
-### Stage 0 — chen_scan.py 原始数据
+### Stage 0 — ticker_scan.py 原始数据
 [原始 yfinance 数据表，所有 ticker 所有字段]
 
 ### Stage 1 — 2A 九大翻倍股特征
@@ -258,12 +258,12 @@ Stage 1 通过：N 只 | Stage 2 通过：N 只 | Stage 3 评估：N 只
 
 | Skill | 关系 |
 |-------|------|
-| `/sector-analyze` | chen-scan 读 `outputs/market/daily/` 已有赛道健康度，不重新运行赛道分析 |
-| `/stock-analyze` | 下游；chen-scan 永远不自动触发，由用户手动对 🔥/⭐ 候选运行 |
+| `/sector-analyze` | ticker-scan 读 `outputs/market/daily/` 已有赛道健康度，不重新运行赛道分析 |
+| `/stock-analyze` | 下游；ticker-scan 永远不自动触发，由用户手动对 🔥/⭐ 候选运行 |
 | `/morning-check` | 无直接关系；用户自行决定是否 `positions.py add --status Watch` |
-| `/chen-integrate` | chen-scan 可读 `wiki/opinions/chen-yun-log/` 近 7 日文件，若某 ticker 近期被 Chen 提及，2A 评分 +1 bonus（标注"Chen 近期提及"）|
+| `/method-integrate` | ticker-scan 可读 `wiki/opinions/method-log/` 近 7 日文件，若某 ticker 近期被方法论提及，2A 评分 +1 bonus（标注"方法论近期提及"）|
 
-## chen-scan 不做的事
+## ticker-scan 不做的事
 
 - 不自动调用 `/stock-analyze`
 - 不写入 `positions.py`

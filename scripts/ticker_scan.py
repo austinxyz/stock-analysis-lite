@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 """
-chen_scan.py — quantitative fundamentals layer for /chen-scan skill
+ticker_scan.py — quantitative fundamentals layer for /ticker-scan skill
 
-Fetches yfinance data needed for Chen Yun 2A/2B/2C scoring.
-Called by the /chen-scan skill before LLM qualitative evaluation.
+Fetches yfinance data for hot-sector stock screening (2A/2B/2C scoring).
+Called by the /ticker-scan skill before LLM qualitative evaluation.
 
 Usage:
-  py scripts/chen_scan.py GCTS LWLG AAOI
-  py scripts/chen_scan.py GCTS LWLG --json
+  py scripts/ticker_scan.py GCTS LWLG AAOI
+  py scripts/ticker_scan.py GCTS LWLG --json
 
 JSON fields per ticker (one line per ticker):
   ticker          — uppercase symbol
   exchange        — e.g. "NMS", "NYQ", "OTC"
-  is_otc          — bool; OTC/Pink → excluded from Chen scan
+  is_otc          — bool; OTC/Pink → excluded from scan
   market_cap_m    — market cap in USD millions (null if unavailable)
   revenue_yoy_pct — latest Q revenue vs same Q prior year (%, null if <5Q data)
   revenue_accel   — bool: last QoQ growth > prior QoQ (null if <3Q data)
@@ -210,7 +210,7 @@ def print_result(r: dict) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Chen Yun quantitative fundamentals scan")
+    parser = argparse.ArgumentParser(description="Hot-sector stock quantitative fundamentals scan")
     parser.add_argument("tickers", nargs="*", metavar="TICKER")
     parser.add_argument("--tickers", nargs="+", dest="extra_tickers", metavar="TICKER")
     parser.add_argument("--json", dest="as_json", action="store_true",
@@ -223,7 +223,7 @@ def main() -> None:
     tickers = list(dict.fromkeys(tickers))
 
     if not tickers:
-        print("Usage: chen_scan.py TICKER1 TICKER2 ... [--json]")
+        print("Usage: ticker_scan.py TICKER1 TICKER2 ... [--json]")
         sys.exit(1)
 
     if not args.as_json:

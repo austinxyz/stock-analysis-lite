@@ -1,6 +1,6 @@
 # 框架综合指南 — 何时用哪个框架
 
-本 Wiki 共有五个分析框架，各司其职。本文说明它们如何协作，以及在不同场景下的优先级。**同时包含 Roth IRA 和应税账户的完整选股流程与决策逻辑。**
+本 Wiki 共有六个分析框架，各司其职。本文说明它们如何协作，以及在不同场景下的优先级。**同时包含 Roth IRA 和应税账户的完整选股流程与决策逻辑。**
 
 ---
 
@@ -18,6 +18,32 @@
 
 ---
 
+## 个股三分类系统（贯穿全部 Skills）
+
+**所有个股技能（/stock-analyze / /stock-entry / /stock-exit / /morning-check）均基于此分类**，类型决定止损参数、建仓节奏、减仓逻辑：
+
+| 类型 | 标识 | 市值参考 | 盈利要求 | 止损理念 | 持仓周期 |
+|------|------|---------|---------|---------|---------|
+| **蓝筹长持** | 🏦 | >$10B | 稳定盈利，有护城河 | 论文止损（无机械价格止损）| 1–5 年，LTCG 意识 |
+| **翻倍候选** | 🚀 | $500M–$10B | 亏损可接受，拐点向好 | 2×ATR 价格止损 + 论文止损 | 3–12 个月 |
+| **热赛道动量** | ⚡ | <$2B | 早期/亏损可接受 | 移动止损（近10日高 − 1.5×ATR）| 1–8 周 |
+
+**类型判定流程：** `/stock-analyze` Step 0 自动判定 → 写入 `analysis.md` → `/stock-entry` 读取 → `/morning-check` 的 Step 6C 按类型应用不同持仓决策矩阵。
+
+**Watch notes 标识格式（跨 skill 通信渠道）：**
+```
+【类型: 🏦 蓝筹长持 | 目标: LTCG 1yr+ | 账户: Roth IRA 优先】
+【类型: 🚀 翻倍候选 | 赛道: XX | 目标: 2-5× | 自由股@+100%】
+【类型: ⚡ 热赛道动量 | 赛道: XX | 移动止损: $XX | 热度窗口: X周】
+```
+
+**类型写入点：**
+- `/stock-entry` → 手动入场时写入
+- `/sector-analyze` Step 10 → 赛道衍生仓位写入
+- `/market-weekly` Step 3.6D → rwh 推荐仓位写入
+
+---
+
 ## Roth IRA — 选股逻辑与流程
 
 ### 五桶框架
@@ -25,7 +51,7 @@
 | 桶 | 用途 | 止损规则 |
 |----|------|---------|
 | 杠杆核心（如 TQQQ）| 长期引擎，以大盘 ETF 为基础放大 | QQQ 跌破 200MA → 减仓 30% |
-| 主题个股 | 高增长赛道精选，最多 6 只 | 技术止损 −8% 或跌破 MA50 执行 |
+| 主题个股 | 高增长赛道精选，最多 6 只 | 按类型（🏦/🚀/⚡）应用对应止损规则 |
 | 赛道 ETF | 七大赛道（电网/存储/光互连/LEO/半导体封装/矿产资源/房地产）主题仓 | 等 /sector-check 触发入场，不追高 |
 | 信仰仓（如中概）| 长期主题押注，接受高波动 | 论点破坏时再退，不按技术机械止损 |
 | 现金缓冲 | 机动资金，应对触发机会 | 保持最小缓冲，不过度空置 |
@@ -33,19 +59,20 @@
 ### 个股入场标准（Roth）
 
 1. **论文质量**：通过 BAIT ≥3 overlap + Moneyball PW EV 高于当前价 15%+ + 非对称 >2:1
-2. **技术确认**：SEPA Stage 2，趋势模板 ≥5/8，有明确轴心点（VCP / 杯柄 / 平台）
+2. **技术确认**：SEPA Stage 2，趋势模板按类型达标（🏦 ≥5/8；🚀/⚡ ≥3/8），有明确轴心点
 3. **仓位限制**：全两个 Roth 合计个股 ≤6 只（满仓时须先清出一只）
-4. **市场环境**：SPY/QQQ 在 200MA 之上（熊市暂停新建仓）
+4. **市场环境**：SPY/QQQ 在 200MA 之上（熊市暂停新建仓）；宏观剧烈动荡期 → 动态观望（多看少动手）
 
 ### 个股持仓管理（Roth）
 
-| 信号 | 操作 |
-|------|------|
-| 跌至止损价 | 🛑 Exit 全部（无例外，Roth 无税务顾虑） |
-| P&L > +20%，Stage 2 健康 | Hold，上调止损至保本或最近摆动低点 |
-| P&L > +20%，跌破 MA50 | Trim 50%，剩余移动止损 |
-| 单日 gap +30%（抛物线顶）| Trim 50% 锁利 |
-| 论点破坏（changelog 标记）| 降级 Trim 阈值，考虑 Exit |
+| 信号 | 🏦 蓝筹 | 🚀 翻倍 | ⚡ 动量 |
+|------|--------|--------|--------|
+| 触及止损 | 论文止损（不按价格）| 连续2日确认 → Exit | 移动止损触发 → Exit |
+| P&L >+20% | Hold + 上调 trailing stop | Hold + 等+100%自由股 | 按移动止损跟踪 |
+| P&L >+100% | 视估值，LTCG 优先 | **自由股规则**：卖50%，剩余零成本 | 不适用 |
+| 单日 gap +30% | Trim 25-33% | Trim 33% 锁利 | Trim 50% 锁利（抛物线顶）|
+| 组合内多只同时大涨 | — | **止盈提醒**：主动锁本金+部分盈利 | — |
+| 论点破坏 | 降级，考虑 Exit | 直接 Exit（催化剂消失）| 不按论文，按技术 |
 
 工具：`/morning-check <TICKER>`（单只深度）/ `/morning-check ALL`（批量扫描）
 
@@ -53,7 +80,7 @@
 
 ```
 [赛道 ETF 触发条件，满足任一]
-    ① Chen Yun 近 7 日该赛道 ≥3 只不同 ticker 被提及
+    ① Chen Yun / 热门赛道信号：近 7 日该赛道 ≥3 只不同 ticker 被提及
     ② ETF 价格 ≤ MA50 −5%（技术回调入场）
     ③ Fear & Greed < 30（极度恐慌机会）
          ↓
@@ -75,15 +102,19 @@
 
 ```
 ①发现   /sector-analyze（无参数）  聚合 4 源评分提名候选赛道
-②论文   /sector-analyze <主题>     生成 wiki/sectors/<slug>.md（11节 + 可投性判定）
-③深挖   /etf-analyze + /stock-analyze  对 §10 载体候选逐个深度分析
-④进出场 hot-sector-playbook + /stock-exit --profile hot-sector
-⑤录入   positions.py Watch（notes 加【赛道:前缀）→ morning-check 按赛道分组显示
+②论文   /sector-analyze <主题>     生成 wiki/sectors/<slug>.md（11节 + 可投性判定 + 个股类型标注）
+③深挖   /etf-analyze + /stock-analyze  对 §10 载体候选逐个深度分析（含类型分类）
+④进出场 按类型选用参数：🏦 蓝筹规则 / 🚀 金字塔建仓+自由股 / ⚡ 移动止损+热度窗口
+⑤录入   positions.py Watch（notes 加【赛道:前缀 + 【类型:前缀）→ morning-check 按赛道+类型分组
 ```
 
-**生命周期决定纪律：** 赛道论文 §4 = 萌芽/成长 → 个股走 hot-sector-playbook（免费股/抛物线/无 LTCG）；成熟 → 蓝筹规则。
+**生命周期 → 类型映射（sector-analyze §4 决定）：**
 
-**ETF 打底 + 个股卫星：** 每赛道以 ETF 为核心仓（固定 %），1–2 只高信念个股为卫星（小仓）。比例见 `data/strategy/roth-2026.md`。
+| 赛道生命周期 | 市值范围 | 对应个股类型 |
+|------------|---------|------------|
+| 萌芽/成长，市值 <$2B | 小盘 | ⚡ 热赛道动量 |
+| 成长，市值 $500M–$10B + Chen 赛道拐点 | 中盘成长 | 🚀 翻倍候选 |
+| 成熟，市值 >$10B + 稳定盈利 | 大盘 | 🏦 蓝筹长持 |
 
 **账户：** 热赛道（萌芽/成长）→ Roth；成熟赛道蓝筹 → 应税。
 
@@ -153,6 +184,7 @@ upstream rwh 周报（Initiate / Add 推荐）
 /market-weekly 自动筛选：
     非持有者推荐 Initiate/Add
     + 当前价在 Entry 区间附近
+    + 类型分类（市值推断 → 🏦 蓝筹 → 确认应税账户归属）
          ↓
 写入 data/morning-checks/taxable-action-YYYY-WXX.md（私有）：
     - TLH 本周操作
@@ -168,21 +200,22 @@ upstream rwh 周报（Initiate / Add 推荐）
 [新标的进入研究流程]
          │
          ▼
-    是蓝筹股？（市值 >$100B，护城河明确，适合长持）
-    ├─ 是 → 应税账户桶 B（前提：有槽位 + 在 Entry 区间）
-    └─ 否 ↓
+    /stock-analyze → 类型分类（Step 0）
          │
-    是赛道 ETF？（GRID / SOXX / ARKX / 光互连组合 / REMX；房地产暂无 ETF）
-    ├─ 是 → Roth 赛道 ETF 仓（等 /sector-check 触发）
-    └─ 否 ↓
+         ├─ 🏦 蓝筹长持（市值 >$10B，护城河明确）
+         │       └─ 应税账户桶 B（前提：有槽位 + 在 Entry 区间）
          │
-    是杠杆 ETF？（TQQQ / TSLL 等）
-    ├─ 是 → 仅 Roth（禁止放应税账户）
-    └─ 否 ↓
+         ├─ 🚀 翻倍候选（$500M–$10B，拐点/小盘成长）
+         │       └─ Roth 个股仓（金字塔建仓 + 自由股规则）
          │
-    是高增长个股？（市值 <$100B，波动大，短期催化剂驱动）
-    ├─ 是 → Roth 个股仓（≤6 只，SEPA Stage 2 确认）
-    └─ 否 → 不符合任何桶，返回 Watch List 等待
+         ├─ ⚡ 热赛道动量（<$2B，早期验证/热度驱动）
+         │       └─ Roth 个股仓（移动止损，热度窗口控仓）
+         │
+         ├─ 赛道 ETF（GRID / SOXX / ARKX / REMX 等）
+         │       └─ Roth 赛道 ETF 仓（等 /sector-check 触发）
+         │
+         └─ 杠杆 ETF（TQQQ / TSLL 等）
+                 └─ 仅 Roth（禁止放应税账户）
 ```
 
 ---
@@ -195,7 +228,12 @@ upstream rwh 周报（Initiate / Add 推荐）
 | **Moneyball** | `frameworks/moneyball.md` | 预期价值 vs 当前价格的差距是多少？| 论文构建 |
 | **Asset Types** | `frameworks/asset-types.md` | 这类商业模式该用什么指标衡量？ | 论文构建 |
 | **SEPA** | `frameworks/sepa.md` | 技术上，现在是买入的正确时机吗？ | 入场执行 |
-| **Chen Yun 方法论** | `frameworks/chen-yun-method.md` | 这只股票是否属于结构性主题赛道？ | 想法生成 |
+| **热门赛道方法论** | `frameworks/hot-sector-method.md` | 建仓风格：金字塔式；风险纪律：免费股/OTC排除/跳空理论 | 执行纪律 |
+| **Chen Yun 方法论** | `(stock-kb)/wiki/frameworks/chen-yun-method.md` | 七大赛道 × 翻倍股筛选（2A/2B/2C）；风险纪律：止盈提醒/动态观望 | 想法生成 + 执行纪律 |
+
+> **热门赛道方法论 vs Chen Yun 方法论** — 两者建仓风格（金字塔/不怕追高/免费股）**完全一致，互相印证**。核心分工：
+> - Chen Yun 方法论：七大赛道发现 + 2A/2B/2C 筛选漏斗 + 组合级风险纪律（止盈提醒/动态观望）
+> - 热门赛道方法论：执行细则（具体止损触发/抛物线顶信号/ETF止损）
 
 ---
 
@@ -204,21 +242,28 @@ upstream rwh 周报（Initiate / Add 推荐）
 ```
 [想法来源]
     │
-    ├─ Chen Yun 提示 / 主题赛道扫描
+    ├─ Chen Yun 提示 / 赛道扫描（/chen-scan）
     │       ↓
-    │   Step 1: 对照七大赛道 + 翻倍股九大特征 / 多倍股六大类型 / 五大标准（详见 chen-yun-method.md §2A/2B/2C；独立验证财报）
-    │       ↓
-    │   通过 ≥3 条 → 进入研究流程
-    │   通过 1-2 条 → 保留 opinions/ 作主题输入
-    │       ↓
-    ├─ 自主发现（新闻、财报、sector rotation）
+    │   筛选漏斗：2A 九大特征 → 2B 六大类型×五大公式 → 2C 五大标准
+    │   ≥3 条 2C 通过 → 进入研究流程
+    │   1-2 条 → 保留 opinions/ 作主题输入
+    │
+    ├─ /sector-analyze 发现扫描（自下而上聚类 + 外部信号）
+    │
+    └─ 自主发现（新闻、财报、sector rotation）
     │
     ↓
-[研究阶段] — 构建 wiki/tickers/<TICKER>/thesis.md
+[类型分类] — /stock-analyze Step 0
+    │
+    ├─ 市值 + 盈利 + 赛道生命周期 → 🏦 / 🚀 / ⚡
+    └─ 类型写入 analysis.md，后续所有 skill 读取此字段
+    │
+    ↓
+[研究阶段] — 构建 wiki/tickers/<TICKER>/analysis.md
     │
     ├─ Asset Types → 确定估值方法和核心指标
     │
-    ├─ BAIT → 识别错误定价来源（B/A/I/T 各几个 overlap？）
+    ├─ BAIT → 识别错误定价来源
     │       ≥3 overlap → 高确信度
     │       1 overlap → 有趣但单薄
     │       0 overlap → 不值得深入
@@ -228,57 +273,66 @@ upstream rwh 周报（Initiate / Add 推荐）
             否则 → 重新审视假设或放弃
     │
     ↓
-[技术确认阶段] — SEPA
+[技术确认阶段] — SEPA（按类型调整标准）
     │
-    ├─ Stage 分析：是否在 Stage 2？
-    │       否 → 进入 Watch 仓，等 Stage 2 确认
-    │       是 → 继续
-    │
-    ├─ 趋势模板：≥5/8 条件通过？
-    │       否 → Watch，等更多条件满足
-    │       是 → 继续
-    │
+    ├─ Stage 分析：是否在 Stage 2？（🏦 严格；🚀/⚡ 可接受 Stage 1 末期试仓）
+    ├─ 趋势模板：🏦 ≥5/8；🚀/⚡ ≥3/8
     └─ 形态识别：VCP / 杯柄 / 平台整理？
-            形态未成熟 → Watch，等轴心点形成
-            轴心点出现 + 量能配合 → 进入执行阶段
     │
     ↓
-[执行阶段] — /morning-check
+[执行阶段] — /stock-entry（按类型选参数集）
     │
-    ├─ 计算入场区间、止损、T1/T2
-    ├─ 验证风险/回报 ≥ 2:1
-    ├─ 检查市场环境（SPY/QQQ vs 200MA）
-    └─ 输出 Execute / Chase 50% / Wait / Skip 建议
+    ├─ 🏦 蓝筹：窄止损（轴心点下 3-5%），论文止损优先，两批建仓（可选）
+    │
+    ├─ 🚀 翻倍：2×ATR 止损，金字塔三步建仓（40%试仓验证论点→40%确认追入→20%催化剂）
+    │           自由股规则（+100% 卖50%，剩余零成本持有目标3-5×）
+    │           Chen Yun 补充：止盈提醒 + 动态观望 + 跳空理论
+    │
+    └─ ⚡ 动量：移动止损（近10日高 − 1.5×ATR），两步建仓（60%快入+40%追涨）
+    │
+    ↓
+[日常管理] — /morning-check ALL（Step 6C 按类型应用不同矩阵）
+    │
+    ├─ 🏦 蓝筹：禁止机械止损，论文检查提示；Trim 阈值 +50%；LTCG 倒计时提醒
+    ├─ 🚀 翻倍：2日确认止损；自由股 +100% 前置提醒；自由股后 → 论文止损唯一出口
+    └─ ⚡ 动量：每日重算移动止损；ETF MA50 赛道止损；不按 +20% 通用 Trim
 ```
 
 ---
 
 ## 框架叠加矩阵
 
-不同场景下应激活哪些框架：
-
-| 场景 | 账户 | Chen Yun | BAIT | Moneyball | Asset Types | SEPA | /morning-check |
-|------|------|:--------:|:----:|:---------:|:-----------:|:----:|:--------------:|
-| 初步筛选新标的 | 通用 | ✅ 主 | — | — | — | — | — |
-| 构建完整论文 | 通用 | 参考 | ✅ 主 | ✅ 主 | ✅ 主 | 辅 | — |
-| 财报后更新（/stock-refresh）| 通用 | — | ✅ 复查 | ✅ 复查 | — | ✅ 复查 | — |
-| Roth 个股每日入场 | Roth | — | — | — | — | ✅ 隐式 | ✅ 主 |
-| Roth 持仓 Hold/Trim/Exit | Roth | — | — | — | — | Stage 判断 | ✅ 主 |
-| 应税蓝筹候选评估 | 应税 | — | ✅ 护城河 | ✅ EV | ✅ 主 | — | — |
-| 应税蓝筹退出判断 | 应税 | — | ✅ 论点审查 | — | — | — | — |
-| 主题赛道轮动判断 | Roth | ✅ 主 | B层 | — | — | — | — |
-| ETF 深度分析（/etf-analyze）| Roth | 参考 | — | 场景 | — | ✅ 主 | — |
-| 赛道 ETF 定投（/sector-check）| Roth | ✅ 主 | B层 | — | — | 触发判断 | ✅ 主 |
-| 应税 DCA / TLH 操作 | 应税 | — | — | — | — | — | `/market-weekly` |
+| 场景 | 账户 | Chen Yun | 热门赛道方法论 | BAIT | Moneyball | Asset Types | SEPA | /morning-check |
+|------|------|:--------:|:------:|:----:|:---------:|:-----------:|:----:|:--------------:|
+| 初步筛选新标的 | 通用 | ✅ 主（2A/2B/2C）| 赛道验证 | — | — | — | — | — |
+| /chen-scan 扫描赛道候选 | 通用 | ✅ 主 | — | — | — | — | — | — |
+| 构建完整论文 | 通用 | 参考赛道 | — | ✅ 主 | ✅ 主 | ✅ 主 | 辅 | — |
+| 财报后更新（/stock-refresh）| 通用 | — | — | ✅ 复查 | ✅ 复查 | — | ✅ 复查 | — |
+| 个股入场（按类型）| Roth | — | ✅ 建仓风格 | — | — | — | ✅ 主 | ✅ 配合 |
+| Roth 持仓 Hold/Trim/Exit | Roth | 止盈提醒/动态观望 | 风险纪律 | — | — | — | Stage 判断 | ✅ 主 |
+| 应税蓝筹候选评估 | 应税 | — | — | ✅ 护城河 | ✅ EV | ✅ 主 | — | — |
+| 应税蓝筹退出判断 | 应税 | — | — | ✅ 论点审查 | — | — | — | — |
+| 主题赛道轮动判断 | Roth | ✅ 七大赛道 | ✅ 赛道纪律 | B层 | — | — | — | — |
+| ETF 深度分析（/etf-analyze）| Roth | 赛道参考 | — | — | 场景 | — | ✅ 主 | — |
+| 赛道 ETF 定投（/sector-check）| Roth | ✅ 信号密度 | ✅ 触发纪律 | B层 | — | — | 触发判断 | ✅ 主 |
+| 应税 DCA / TLH 操作 | 应税 | — | — | — | — | — | — | `/market-weekly` |
 
 ---
 
 ## 框架间的关键连接点
 
-### Chen Yun ↔ BAIT
-- Chen Yun 的"盈利拐点"= BAIT **B 层**（市场情绪滞后于运营数据）
-- Chen Yun 的"订单积压可见性"= BAIT **A 层**（分析性低效，大多数模型低估积压价值）
-- Chen Yun 的七大赛道选题 = 主题性 **I 层**（散户尚未发现的行业信息不对称）
+### Chen Yun 方法论 ↔ BAIT
+- Chen Yun 2A 特征 "盈利拐点" = BAIT **B 层**（市场情绪滞后于运营数据）
+- Chen Yun 2A 特征 "订单积压可见性" = BAIT **A 层**（分析性低效，模型低估积压价值）
+- Chen Yun 七大赛道选题 = 主题性 **I 层**（散户尚未发现的行业信息不对称）
+- Chen Yun 2B 五大公式"技术壁垒高" = BAIT **T 层**（时间性低效：技术壁垒短期难复制）
+
+### Chen Yun 方法论 ↔ 热门赛道方法论
+- **建仓风格完全一致**：金字塔式、"不怕追高"、免费股策略 — 两框架互相印证
+- **风险纪律互补**：
+  - 热门赛道方法论：单只止损触发、抛物线顶信号、ETF MA50 赛道止损
+  - Chen Yun：组合级止盈提醒（多只同涨时主动锁利）、动态观望（宏观过滤层）
+- **论文验证要求**：Chen Yun 明确要求独立财报验证（不直接采信聊天描述）
 
 ### BAIT ↔ Moneyball
 - BAIT 识别**为什么**存在错误定价
@@ -290,30 +344,37 @@ upstream rwh 周报（Initiate / Add 推荐）
 - Moneyball 的 Bull/Base Case 价格 = SEPA 的 T1/T2 目标
 - SEPA 的入场时机可以提高 Moneyball 期望值的实现概率
 
-### SEPA ↔ Chen Yun
-- Chen Yun 的金字塔建仓与 SEPA 的 Pyramiding 原则一致
-- Chen Yun 的"不怕追高"与 SEPA 的"买入区 = Pivot +5%" 形成对照：
-  SEPA 有明确上限，Chen Yun 更注重趋势持续而非精确入场价
-- 两者在止盈上有共识：仓位上涨 100% 后先收回成本（Chen Yun 免费股 = SEPA Phase 2 止损移至保本）
+### SEPA ↔ Chen Yun / 热门赛道方法论
+- 两者金字塔建仓原则一致；差异在精度：SEPA 要求精确 Pivot 突破 + 量能，Chen Yun 入场精度要求更低、更注重趋势持续性
+- 共识：仓位上涨 100% 先收回成本（自由股策略 = SEPA Phase 2 止损移至保本 + 卖半锁利）
+- 差异：SEPA 的买入区 = Pivot +5%（有上限）；Chen Yun "不怕追高"（追入 = 确认信号，无硬上限）
+
+### 三分类系统 ↔ 所有 Skills
+- **分类是元信息**：stock-analyze 产出类型 → stock-entry 读取 → morning-check Step 6C 按类型切换矩阵
+- **Watch notes 是通信总线**：`【类型: X】` 标签是 sector-analyze / market-weekly / stock-entry 向 morning-check 传递类型的渠道
+- **账户归属与类型强绑定**：🏦 → 应税；🚀/⚡ → Roth（默认规则，可因标的特殊情况调整）
 
 ---
 
 ## 优先级规则
 
-1. **研究质量优先于信号速度**：Chen Yun 提示是起点，不是终点。2A/2B/2C 三层筛选 + 独立财报验证是必须步骤（翻倍股九大特征 → 多倍股六大类型 → 五大标准）。
-2. **BAIT 确信度决定仓位大小**：1 overlap = 试仓；3+ overlap = 满仓
-3. **SEPA Stage 是硬门槛**：Stage 4 下跌趋势中，无论 BAIT 多强，不建新仓
-4. **Moneyball PW EV 是买入触发线**：当前价 > PW EV 时，即使 BAIT 强、SEPA 好，也不追高
-5. **市场环境是总开关**：熊市（SPY/QQQ < 200MA，或 `/market-daily` 5-signal 框架 ≤2/5 积极）期间，所有新仓决策暂停；出现 Distribution Warning（Golden Cross 股大量抛售）时不抄底
+1. **研究质量优先于信号速度**：Chen Yun 提示是起点，不是终点。2A/2B/2C 三层筛选 + 独立财报验证是必须步骤。
+2. **类型决定参数集**：确认类型后，止损/建仓/减仓逻辑必须按类型执行，不能混用。
+3. **BAIT 确信度决定仓位大小**：1 overlap = 试仓；3+ overlap = 满仓
+4. **SEPA Stage 是硬门槛**：Stage 4 下跌趋势中，无论 BAIT 多强，不建新仓（🚀/⚡ 类型可接受 Stage 1 末期小仓试仓验证论点）
+5. **Moneyball PW EV 是买入触发线**：当前价 > PW EV 时，即使 BAIT 强、SEPA 好，也不追高
+6. **市场环境是总开关**：熊市（SPY/QQQ < 200MA，或 `/market-daily` 5-signal 框架 ≤2/5 积极）期间，所有新仓决策暂停；出现 Distribution Warning 时不抄底
+7. **动态观望叠加宏观**：VIX >35 / 地缘政治冲击 → 即使技术面好，🚀/⚡ 新仓暂停；多看少动手
 
 ---
 
 ## 交叉引用
 
 - 上游框架：`frameworks/bait.md`、`frameworks/moneyball.md`、`frameworks/asset-types.md`
-- Overlay 框架：`frameworks/chen-yun-method.md`、`frameworks/sepa.md`
-- 执行工具（Roth）：`/morning-check`（日常入场 + 批量扫描）、`/sector-check`（赛道 ETF 定投）、`/etf-analyze`（ETF 深度分析）
+- Overlay 框架：`frameworks/hot-sector-method.md`、`frameworks/sepa.md`
+- 外部框架：`(stock-kb)/wiki/frameworks/chen-yun-method.md`（七大赛道 + 2A/2B/2C + 风险纪律）
+- 执行工具（Roth）：`/morning-check`（日常入场 + 批量扫描 + 三类型矩阵）、`/sector-check`（赛道 ETF 定投）、`/etf-analyze`（ETF 深度分析）、`/chen-scan`（七大赛道候选扫描）
 - 执行工具（应税）：`/market-weekly`（生成每周应税行动建议，私有文件）、`/stock-refresh`（论文更新）
-- 执行工具（通用）：`/stock-analyze`（深度分析新标的或退出评估）
+- 执行工具（通用）：`/stock-analyze`（深度分析 + 类型分类）、`/stock-entry`（三类型参数化入场）、`/stock-exit`（三类型退出逻辑）
 - 账户策略文件（私有，不上传 git）：`data/strategy/roth-2026.md`、`data/strategy/taxable-2026.md`
 - Skill：`finance-market-analysis:sepa-strategy`（完整 SEPA 分析）
