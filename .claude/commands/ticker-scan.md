@@ -18,7 +18,7 @@
 |---------|--------------|----------------|
 | 存储 / 存储记忆体 / storage | storage | MU MRVL QMCO GSIT |
 | 光互连 / 光电互连 / optical | optical | COHR CRDO AAOI AXTI NOK OCC LWLG MXL |
-| 卫星 / LEO卫星 / satellite | satellite | RKBL YSS PL SIDU GCTS ASTS |
+| 卫星 / LEO卫星 / satellite | satellite | RKLB YSS PL SIDU GCTS ASTS |
 | 电网 / 储能 / 功率半导体 / grid | grid | NVTS WOLF VSH AMSC FLNC EOSE |
 | 封装 / 封测 / packaging | packaging | AMKR COHU AEHR INTC ASX INTT |
 | 矿产 / 矿产资源 / minerals | minerals | ALOY UUUU ABAT ALM USAR UMAY |
@@ -183,7 +183,7 @@ Stage 1 通过：N 只 | Stage 2 通过：N 只 | Stage 3 评估：N 只
 |---|--------|------|------|----------|----------|--------|------|------|
 | 1 | LWLG | 光互连 | 7 | 5 | 5/5 | ✅✅✅⚠️✅ | 🔥多倍候选 | /stock-analyze LWLG |
 | 2 | GCTS | LEO卫星 | 6 | 4 | 4/5 | ✅✅⚠️✅✅ | ⭐翻倍候选 | /stock-analyze GCTS |
-| 3 | RKBL | LEO卫星 | 4 | 3 | 3/5 | ✅⚠️❌✅⚠️ | 👀观察 | 等下季财报 |
+| 3 | RKLB | LEO卫星 | 4 | 3 | 3/5 | ✅⚠️❌✅⚠️ | 👀观察 | 等下季财报 |
 
 ### Stage 1/2 筛除
 

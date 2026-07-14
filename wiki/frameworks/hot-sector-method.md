@@ -24,7 +24,7 @@
 |---|------|---------|---------|
 | 1 | **存储记忆体** Memory & Storage | AI 驱动 DRAM/HBM 需求周期 | MU, MRVL, QMCO, GSIT, MRAM, DRAM |
 | 2 | **AI光电互连/高速连接** Optical Interconnect | AI 数据中心带宽瓶颈 = 光子学 | COHR, CRDO, AAOI, AXTI, NOK, OCC, LWLG, MXL |
-| 3 | **卫星通讯/低轨卫星** Satellite Comms | 星链经济 + 国防/商业双轮 | RKBL, YSS, PL, SIDU, GCTS, ASTS |
+| 3 | **卫星通讯/低轨卫星** Satellite Comms | 星链经济 + 国防/商业双轮 | RKLB, YSS, PL, SIDU, GCTS, ASTS |
 | 4 | **AI功率半导体/电网储能** Power Semi + Grid | SiC/超导/储能 = AI 耗电物理层 | NVTS, WOLF, VSH, AMSC, FLNC, EOSE |
 | 5 | **半导体封装测试** Packaging & Test | 先进封装 + 测试 = AI 系统算力瓶颈（华为"韬定律"）| AMKR, COHU, AEHR, INTC, ASX, INTT, OSS, VIVA |
 | 6 | **矿产资源** Mineral Resources | 关键矿产/稀土/铀/电池材料（去中国化）| ALOY, UUUU, ABAT, ALM, USAR, UMAY |
@@ -37,7 +37,7 @@
 > - **光互连**：Chen 点名偏**纯光器件/连接**（COHR/CRDO/AAOI/AXTI/NOK/OCC/LWLG/MXL）；POET 已 2026-05-08 放弃，本表移除。⚠️ 注意 optical-interconnect ledger 的视频版另含上游材料/代工层（TSEM/GLW/LITE/IQE/Soitec）——那是分析补充，非 Chen 点名
 > - **封测**：Chen 实际点名 = OSAT + 测试（AMKR/COHU/AEHR/INTC/ASX/INTT/OSS/VIVA），**不含 TSM/GFS**（TSM CoWoS/GFS 代工是 ledger 的分析补充，非 Chen 封测点名）；VIVA 无行情数据（疑误或 VIAV）
 > - **电网**：NVTS/WOLF/VSH/AMSC(美超导)/FLNC/EOSE（旧版 ON/STM 非 Chen 点名）
-> - **卫星**：RKBL/YSS/PL/SIDU/GCTS/ASTS
+> - **卫星**：RKLB/YSS/PL/SIDU/GCTS/ASTS
 > - **🆕 矿产资源**（ALOY/UUUU 铀/ABAT 电池/ALM/USAR 稀土/UMAY）——Chen 偏**铀+电池材料+稀土小盘**，区别于 critical-minerals ledger 用的 MP/ALB/SQM 主流大盘
 > - **🆕 房地产**（OPEN Opendoor / COMP Compass）——Chen 新增，已建 ledger `wiki/sectors/real-estate.md`（降息扭亏 proptech，可投性 Watch；COMP 基本面优于 OPEN binary）
 
