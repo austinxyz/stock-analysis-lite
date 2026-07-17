@@ -45,8 +45,10 @@ yfinance 是 Python 库，必须由 Python 进程调用。所以流程是：
   "consecutive_growth_q": 4,  // 连续几个季度营收正增长
   "eps_trend": "improving",   // loss→profit / profit→loss / improving / declining / stable / unknown
   "inst_pct": 71.3,           // 机构持仓 %（null = 无数据）
-  "ma50_pct": 4.2,            // 现价偏离 MA50 %（正数 = 在 MA50 上方）
-  "ma200_pct": 18.7,          // 现价偏离 MA200 %（null = 上市不足 200 天）
+  "ma50_pct": 4.2,            // 现价偏离 MA50 %（正数 = 在 MA50 上方；历史不足时省略该键）
+  "ma150_pct": 9.8,           // 现价偏离 MA150 %（历史不足 150 天时省略该键）
+  "ma200_pct": 18.7,          // 现价偏离 MA200 %（历史不足 200 天时省略该键）
+  "ma200_trend": "up",        // MA200 vs 21 交易日前："up"/"down"/"flat"（历史不足 221 天时省略该键）
   "max_gap_up_pct": 14.2      // 过去 1 年最大单日跳空高开 %（财报 gap 信号）
 }
 ```

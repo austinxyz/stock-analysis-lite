@@ -1,5 +1,4 @@
 import pandas as pd
-import pytest
 
 from scripts.ticker_scan import ma_metrics
 

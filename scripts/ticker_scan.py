@@ -153,7 +153,6 @@ def fetch_ticker(tk: str) -> dict:
         if len(h) < 10:
             return {"ticker": tk, "error": "insufficient price history"}
 
-        price = float(h["Close"].iloc[-1])
         ma = ma_metrics(h["Close"])
 
         # Largest single-day open gap-up (proxy for earnings gap behaviour)
