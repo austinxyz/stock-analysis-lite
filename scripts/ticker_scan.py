@@ -107,6 +107,41 @@ def _eps_trend(fin: pd.DataFrame) -> str:
     return "stable"
 
 
+def ma_metrics(closes: pd.Series) -> dict:
+    """Compute MA-based price-structure metrics from a close-price series.
+
+    Pure (no network) so it can be unit-tested with synthetic series.
+    Keys are omitted when the series is too short to compute them:
+      ma50_pct / ma150_pct / ma200_pct — price vs that MA, in percent.
+      ma200_trend — "up"/"down"/"flat", current MA200 vs MA200 21 bars ago
+                    (thresholds +/-0.5%). Needs >=221 bars.
+    """
+    out: dict = {}
+    if len(closes) == 0:
+        return out
+    price = float(closes.iloc[-1])
+
+    for span, key in ((50, "ma50_pct"), (150, "ma150_pct"), (200, "ma200_pct")):
+        if len(closes) >= span:
+            ma = closes.rolling(span).mean().iloc[-1]
+            if pd.notna(ma) and ma != 0:
+                out[key] = round((price / ma - 1) * 100, 1)
+
+    if len(closes) >= 221:
+        ma200_series = closes.rolling(200).mean()
+        cur = ma200_series.iloc[-1]
+        prev = ma200_series.iloc[-22]
+        if pd.notna(cur) and pd.notna(prev) and prev != 0:
+            chg = (cur / prev - 1) * 100
+            if chg > 0.5:
+                out["ma200_trend"] = "up"
+            elif chg < -0.5:
+                out["ma200_trend"] = "down"
+            else:
+                out["ma200_trend"] = "flat"
+    return out
+
+
 def fetch_ticker(tk: str) -> dict:
     try:
         t = yf.Ticker(tk)
