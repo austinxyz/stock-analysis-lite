@@ -20,7 +20,9 @@ JSON fields per ticker (one line per ticker):
   eps_trend       — "loss→profit" | "profit→loss" | "improving" | "declining" | "stable" | "unknown"
   inst_pct        — institutional ownership % (null if unavailable)
   ma50_pct        — price vs 50-day MA (%)
-  ma200_pct       — price vs 200-day MA (%, null if <200 days history)
+  ma150_pct       — price vs 150-day MA (%, omitted if <150 days history)
+  ma200_pct       — price vs 200-day MA (%, omitted if <200 days history)
+  ma200_trend     — "up"/"down"/"flat": MA200 vs 21 bars ago (omitted if <221 days)
   max_gap_up_pct  — largest single-day open gap-up in last 1y (proxy for earnings gap behaviour)
   error           — present only if fetch failed
 """
@@ -152,13 +154,7 @@ def fetch_ticker(tk: str) -> dict:
             return {"ticker": tk, "error": "insufficient price history"}
 
         price = float(h["Close"].iloc[-1])
-        ma50 = float(h["Close"].rolling(50).mean().iloc[-1])
-        ma50_pct = round((price / ma50 - 1) * 100, 1)
-
-        ma200_pct = None
-        if len(h) >= 200:
-            ma200 = float(h["Close"].rolling(200).mean().iloc[-1])
-            ma200_pct = round((price / ma200 - 1) * 100, 1)
+        ma = ma_metrics(h["Close"])
 
         # Largest single-day open gap-up (proxy for earnings gap behaviour)
         gap_series = (h["Open"] - h["Close"].shift(1)) / h["Close"].shift(1) * 100
@@ -207,12 +203,10 @@ def fetch_ticker(tk: str) -> dict:
             "exchange": exchange,
             "is_otc": is_otc,
             "market_cap_m": market_cap_m,
-            "ma50_pct": ma50_pct,
             "max_gap_up_pct": max_gap_up,
             "eps_trend": eps_trend,
         }
-        if ma200_pct is not None:
-            result["ma200_pct"] = ma200_pct
+        result.update(ma)  # ma50_pct / ma150_pct / ma200_pct / ma200_trend（各自可能省略）
         if inst_pct is not None:
             result["inst_pct"] = inst_pct
         result.update(rev_metrics)
@@ -232,15 +226,17 @@ def print_result(r: dict) -> None:
     accel = "↑" if r.get("revenue_accel") else " "
     consec = f"{r.get('consecutive_growth_q', 0)}Q"
     inst = f"{r['inst_pct']:.1f}%" if "inst_pct" in r else "—"
-    ma50 = f"{r['ma50_pct']:+.1f}%"
+    ma50 = f"{r['ma50_pct']:+.1f}%" if "ma50_pct" in r else "—"
+    ma150 = f"{r['ma150_pct']:+.1f}%" if "ma150_pct" in r else "—"
     ma200 = f"{r['ma200_pct']:+.1f}%" if "ma200_pct" in r else "—"
+    trend = r.get("ma200_trend", "—")
     gap = f"{r['max_gap_up_pct']:+.1f}%"
     eps = r.get("eps_trend", "—")
     print(
         f"{r['ticker']:8s}{otc_flag:<6s} cap={cap:>10s}  "
         f"rev_yoy={yoy:>8s}{accel} consec={consec}  "
         f"eps={eps:<14s} inst={inst:>6s}  "
-        f"ma50={ma50:>7s} ma200={ma200:>7s}  gap_up={gap}"
+        f"ma50={ma50:>7s} ma150={ma150:>7s} ma200={ma200:>7s} trend={trend:<5s} gap_up={gap}"
     )
 
 
