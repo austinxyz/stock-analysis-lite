@@ -234,8 +234,24 @@ Stage 1 通过：N 只 | Stage 2 通过：N 只 | Stage 3 评估：N 只
 
 **赛道空白信号：** 本赛道是否存在 Chen 尚未点名但值得跟踪的潜力标的？（如有，列出；如无，写"暂无明显空白"）
 
-**下一步行动：** `/stock-analyze <TICKER>` 对 🔥/⭐ 做完整 15 节论文；👀 等触发条件后再跑 `/ticker-scan <TICKER>` 单股验证
+**下一步行动：** `/stock-analyze <TICKER>` 对 🔥/⭐ 做完整深度分析；👀 等触发条件后再跑 `/ticker-scan <TICKER>` 单股验证。🔥 候选若带"独立复核不一致"警示，先人工确认价格结构再决定是否进 `/stock-analyze`
 ```
+
+---
+
+### 6.5 独立复核（仅对最终 🔥 候选）
+
+否决表跑完后，若仍有候选保持 🔥 多倍候选（通常 1–3 只），对**每个** 🔥 候选用 Agent 工具起一个独立子 agent 做 outside-view 复核。
+
+**子 agent 输入（干净上下文，不携带本次 scan 的推理过程）：** ticker、现价、`ma50_pct`/`ma150_pct`/`ma200_pct`/`ma200_trend`、`eps_trend`、`revenue_yoy_pct`、backlog 摘要（若 Stage2/3 已 WebSearch 到）。
+
+**子 agent 任务：** 独立套用 SEPA 逻辑，只回 (1) Stage 判断 1–4；(2) 一句话理由。不看 scan 已给的标签。
+
+**处理结果：**
+- 子 agent 判断与 scan 一致（都指向 Stage2 健康）→ 无需额外标注
+- 不一致（子 agent 认为 Stage1/3/4）→ 综合排名表该候选"建议"列追加 `⚠️独立复核不一致（子agent判Stage X），/stock-analyze 前先人工确认`；标签本身不强行覆盖（人是最终判断者）
+
+🔥 候选为 0 时跳过本步。
 
 ---
 
