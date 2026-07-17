@@ -152,9 +152,23 @@ python scripts/ticker_scan.py <全部候选 ticker> --json
 | 2 | 积压订单覆盖 ≥2 季度收入 | WebSearch | query: `"[TICKER] backlog guidance Q1 Q2 2026"` | ✅/⚠️/❌ + 原文摘录 |
 | 3 | 连续 ≥3 季度正向增长 | **yfinance** | `consecutive_growth_q >= 3` | ✅/⚠️/❌ + 季度数 |
 | 4 | 盈利拐点出现（亏→盈） | **yfinance** | `eps_trend == "loss→profit"` | ✅/⚠️/❌ |
-| 5 | 价格结构配合（Stage 2，非 Stage 4 崩坏）| **yfinance** | `ma50_pct > 0 AND ma200_pct > -20` | ✅/⚠️/❌ + MA 数字 |
+| 5 | 价格结构配合（区分 Stage2 健康 vs Stage1 未确认反转）| **yfinance** | 四条子检查见下 | ✅/⚠️/❌ + MA 数字 |
 
 每条输出：`✅/⚠️/❌ — [1行证据，尽量含具体数字]`
+
+**标准#5 判定细则（四条子检查，对齐 `/stock-analyze` SEPA 趋势模板）：**
+
+| 子检查 | 数据来源 | 条件 |
+|--------|---------|------|
+| a. 价 > MA50 | yfinance | `ma50_pct > 0` |
+| b. 价 > MA150 | yfinance | `ma150_pct > 0` |
+| c. 价 > MA200 | yfinance | `ma200_pct > 0` |
+| d. MA200 未走弱 | yfinance | `ma200_trend != "down"` |
+
+- 四条全满足 → ✅ **Stage2健康趋势**
+- 部分满足（如价站上 MA50 但 MA150/MA200 未突破，或 MA200 刚转平）→ ⚠️ **Stage1→2过渡**
+- `ma150_pct < 0` 或 `ma200_trend == "down"` → ❌ **Stage1未确认底部反转**（明确用此措辞，禁止写成"价格结构健康"）
+- 字段缺失（历史不足）→ ⚠️，注明"MA150/MA200趋势数据不足，需完整 SEPA 核实"
 
 ---
 
