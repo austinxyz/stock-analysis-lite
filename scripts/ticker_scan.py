@@ -23,7 +23,7 @@ JSON fields per ticker (one line per ticker):
   ma150_pct       — price vs 150-day MA (%, omitted if <150 days history)
   ma200_pct       — price vs 200-day MA (%, omitted if <200 days history)
   ma200_trend     — "up"/"down"/"flat": MA200 vs 21 bars ago (omitted if <221 days)
-  max_gap_up_pct  — largest single-day open gap-up in last 1y (proxy for earnings gap behaviour)
+  max_gap_up_pct  — largest single-day open gap-up over fetched window (1y scan / 2y full; earnings gap proxy)
   error           — present only if fetch failed
 
 Full mode (--mode full) additional fields (each omitted when unavailable):
