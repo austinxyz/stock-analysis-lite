@@ -65,6 +65,19 @@ yfinance 是 Python 库，必须由 Python 进程调用。所以流程是：
 }
 ```
 
+`--benchmark` 额外输出一行市场环境（独立于个股行）：
+
+```json
+{
+  "benchmark": true,
+  "spy_vs_ma200_pct": 6.2,    // SPY 现价偏离 MA200 %
+  "qqq_vs_ma200_pct": 8.1,    // QQQ 现价偏离 MA200 %
+  "market_env": "bull"        // 两者均>0="bull"；均<0="bear"；否则"chop"
+}
+```
+
+拉取失败的 ticker 输出 `{"ticker": "XXX", "error": "..."}`，其余字段省略。
+
 ---
 
 ## 用法
@@ -81,6 +94,10 @@ python scripts/ticker_scan.py LWLG --json
 
 # 单股深度模式：ATR/52周/RS/趋势模板/财报日/筹码/现金
 python scripts/ticker_scan.py LWLG --mode full --json
+
+# 市场环境：SPY/QQQ vs MA200 → bull/chop/bear（可单独用，也可与 ticker 组合）
+python scripts/ticker_scan.py --benchmark --json
+python scripts/ticker_scan.py MRVL MU --benchmark --json
 ```
 
 ---
