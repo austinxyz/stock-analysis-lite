@@ -1,6 +1,6 @@
 # 热门赛道热门股选择方法论
 
-**来源**: `wiki/opinions/hot-sector.md`、`wiki/opinions/hot-sector-log/`（2026-03-23 至今）、`raw/analyses/chen-classes.md`（实战班第二/三课，2026-06）
+**来源**: 网络总结的翻倍股选股策略；`wiki/opinions/hot-sector.md`、`wiki/opinions/hot-sector-log/`（2026-03-23 至今）
 **性质**: 第三方意见，提炼为可复用框架。所有原始提示未经独立一手验证。
 **适用**: 想法生成阶段、主题筛选、情绪输入 — 不作为独立买入依据。
 
@@ -18,9 +18,9 @@
 
 热门赛道方法论 反复强调 AI 的瓶颈已从算力转移到物理基础设施。他的选股聚集在多条多年期主线：
 
-**权威映射（来源：热门赛道方法论「翻倍股价值股选股实战班第二课」课程截图，2026-06）** — 以下为 Chen 亲自点名的 7 赛道代表标的，取代旧版推断映射：
+**权威映射（来源：网络总结的翻倍股选股策略，2026-06）** — 以下为该策略点名的 7 赛道代表标的，取代旧版推断映射：
 
-| # | 赛道 | 核心论述 | 代表标的（Chen 权威点名）|
+| # | 赛道 | 核心论述 | 代表标的（策略点名）|
 |---|------|---------|---------|
 | 1 | **存储记忆体** Memory & Storage | AI 驱动 DRAM/HBM 需求周期 | MU, MRVL, QMCO, GSIT, MRAM, DRAM |
 | 2 | **AI光电互连/高速连接** Optical Interconnect | AI 数据中心带宽瓶颈 = 光子学 | COHR, CRDO, AAOI, AXTI, NOK, OCC, LWLG, MXL |
@@ -28,25 +28,25 @@
 | 4 | **AI功率半导体/电网储能** Power Semi + Grid | SiC/超导/储能 = AI 耗电物理层 | NVTS, WOLF, VSH, AMSC, FLNC, EOSE |
 | 5 | **半导体封装测试** Packaging & Test | 先进封装 + 测试 = AI 系统算力瓶颈（华为"韬定律"）| AMKR, COHU, AEHR, INTC, ASX, INTT, OSS, VIVA |
 | 6 | **矿产资源** Mineral Resources | 关键矿产/稀土/铀/电池材料（去中国化）| ALOY, UUUU, ABAT, ALM, USAR, UMAY |
-| 7 | **房地产** Real Estate | （Chen 新增价值赛道）| OPEN, COMP |
+| 7 | **房地产** Real Estate | （新增价值赛道）| OPEN, COMP |
 
 **元论述（演进）**："AI 瓶颈不再是算力，而是物理性的：电网升级和光子互连材料。"（4/22）→ **5/26 再补**："AI 真正的瓶颈，一是电力，二是半导体封装。" 赛道 2/4/5 为延续至 2027+ 的结构性机会，非周期性。
 
 > **2026-06 权威更新关键变化**：
 > - **存储**：从仅 MU → 补 MRVL/QMCO/GSIT(GSI Tech)/MRAM/DRAM(ETF)
-> - **光互连**：Chen 点名偏**纯光器件/连接**（COHR/CRDO/AAOI/AXTI/NOK/OCC/LWLG/MXL）；POET 已 2026-05-08 放弃，本表移除。⚠️ 注意 optical-interconnect ledger 的视频版另含上游材料/代工层（TSEM/GLW/LITE/IQE/Soitec）——那是分析补充，非 Chen 点名
-> - **封测**：Chen 实际点名 = OSAT + 测试（AMKR/COHU/AEHR/INTC/ASX/INTT/OSS/VIVA），**不含 TSM/GFS**（TSM CoWoS/GFS 代工是 ledger 的分析补充，非 Chen 封测点名）；VIVA 无行情数据（疑误或 VIAV）
-> - **电网**：NVTS/WOLF/VSH/AMSC(美超导)/FLNC/EOSE（旧版 ON/STM 非 Chen 点名）
+> - **光互连**：策略点名偏**纯光器件/连接**（COHR/CRDO/AAOI/AXTI/NOK/OCC/LWLG/MXL）；POET 已 2026-05-08 放弃，本表移除。⚠️ 注意 optical-interconnect ledger 的视频版另含上游材料/代工层（TSEM/GLW/LITE/IQE/Soitec）——那是分析补充，非策略点名
+> - **封测**：策略实际点名 = OSAT + 测试（AMKR/COHU/AEHR/INTC/ASX/INTT/OSS/VIVA），**不含 TSM/GFS**（TSM CoWoS/GFS 代工是 ledger 的分析补充，非策略封测点名）；VIVA 无行情数据（疑误或 VIAV）
+> - **电网**：NVTS/WOLF/VSH/AMSC(美超导)/FLNC/EOSE（旧版 ON/STM 非策略点名）
 > - **卫星**：RKLB/YSS/PL/SIDU/GCTS/ASTS
-> - **🆕 矿产资源**（ALOY/UUUU 铀/ABAT 电池/ALM/USAR 稀土/UMAY）——Chen 偏**铀+电池材料+稀土小盘**，区别于 critical-minerals ledger 用的 MP/ALB/SQM 主流大盘
-> - **🆕 房地产**（OPEN Opendoor / COMP Compass）——Chen 新增，已建 ledger `wiki/sectors/real-estate.md`（降息扭亏 proptech，可投性 Watch；COMP 基本面优于 OPEN binary）
+> - **🆕 矿产资源**（ALOY/UUUU 铀/ABAT 电池/ALM/USAR 稀土/UMAY）——策略偏**铀+电池材料+稀土小盘**，区别于 critical-minerals ledger 用的 MP/ALB/SQM 主流大盘
+> - **🆕 房地产**（OPEN Opendoor / COMP Compass）——新增赛道，已建 ledger `wiki/sectors/real-estate.md`（降息扭亏 proptech，可投性 Watch；COMP 基本面优于 OPEN binary）
 
 ---
 
 ## 二、个股筛选框架（系统化整合）
 
 ### 2A — 翻倍股九大特征
-*来源：实战班第二课，2026-06-12*
+*来源：网络总结的翻倍股选股策略，2026-06*
 
 | # | 特征 | 备注 |
 |---|------|------|
@@ -61,7 +61,7 @@
 | 9 | 财报断层（earnings gap-up）| 价格行为确认基本面 |
 
 ### 2B — 多倍股（3×–10×）六大类型 × 五大公式
-*来源：实战班第三课，2026-06-14*
+*来源：网络总结的翻倍股选股策略，2026-06*
 
 **六大类型（符合越多越好）：**
 
@@ -205,8 +205,8 @@
 | 低轨卫星 / LEO | UFO · ARKX · ROKT | UFO | 流动性优于 ARKX，alpha 领先（等 SPCX IPO 后回调入场）|
 | 电网 + 储能 / Grid | GRID · ICLN · TAN | GRID | 最贴合 SiC/储能/电网基建 |
 | 半导体封装 / Packaging | 无纯 ETF（SOXX/SMH 部分重叠）| AMKR 个股 或 暂缓 | 🆕 2026-05-26 新增；无纯封装 ETF，TSM/ASX 为 ADR，AMKR 为美国本土封测纯标的 |
-| 矿产资源 / Minerals | REMX · LIT · PICK | REMX | 稀土/关键矿产（Chen 偏铀+稀土小盘；REMX 覆盖稀土/锂/钴，LIT 偏锂电池，PICK 综合矿业）|
-| 房地产 / Real Estate | 无纯 Proptech ETF（IYR/VNQ 偏传统 REIT）| OPEN/COMP 个股 | 🆕 Chen 新增价值赛道；PropTech（降息扭亏逻辑）无合适 ETF 覆盖，以个股为主 |
+| 矿产资源 / Minerals | REMX · LIT · PICK | REMX | 稀土/关键矿产（策略偏铀+稀土小盘；REMX 覆盖稀土/锂/钴，LIT 偏锂电池，PICK 综合矿业）|
+| 房地产 / Real Estate | 无纯 Proptech ETF（IYR/VNQ 偏传统 REIT）| OPEN/COMP 个股 | 🆕 新增价值赛道；PropTech（降息扭亏逻辑）无合适 ETF 覆盖，以个股为主 |
 
 *详细费率和流动性数据见 `wiki/etf/etf-reference.md`。*
 *ETF 选择每次 `/sector-check` 动态重评，不固定绑定。*
@@ -217,6 +217,4 @@
 
 - 原始来源：`wiki/opinions/hot-sector.md`
 - 每日日志：`wiki/opinions/hot-sector-log/`
-- 原始聊天记录：`raw/analyses/chen.md`
-- 实战班笔记：`raw/analyses/chen-classes.md`（第二课翻倍股特征 + 第三课多倍股方法论）
 - 相关框架：`frameworks/synthesis.md`（如何与 BAIT/Moneyball/SEPA 协作）
