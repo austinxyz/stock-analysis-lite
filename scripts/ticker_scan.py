@@ -237,6 +237,22 @@ def market_env(spy_vs_ma200_pct: float, qqq_vs_ma200_pct: float) -> str:
     return "chop"
 
 
+def fetch_benchmark() -> dict:
+    """SPY/QQQ vs MA200 -> market environment (bull/chop/bear)."""
+    out: dict = {"benchmark": True}
+    for sym, key in (("SPY", "spy_vs_ma200_pct"), ("QQQ", "qqq_vs_ma200_pct")):
+        try:
+            h = yf.Ticker(sym).history(period="2y", interval="1d")
+            m = ma_metrics(h["Close"])
+            if "ma200_pct" in m:
+                out[key] = m["ma200_pct"]
+        except Exception:
+            pass
+    if "spy_vs_ma200_pct" in out and "qqq_vs_ma200_pct" in out:
+        out["market_env"] = market_env(out["spy_vs_ma200_pct"], out["qqq_vs_ma200_pct"])
+    return out
+
+
 def fetch_ticker(tk: str, mode: str = "scan", spy_closes: pd.Series | None = None) -> dict:
     try:
         t = yf.Ticker(tk)
@@ -426,6 +442,8 @@ def main() -> None:
                         help="Output raw JSON lines (one per ticker)")
     parser.add_argument("--mode", choices=("scan", "full"), default="scan",
                         help="scan=批量筛选字段；full=单股深度字段（ATR/52w/RS/财报日等）")
+    parser.add_argument("--benchmark", action="store_true",
+                        help="输出 SPY/QQQ vs MA200 市场环境行")
     args = parser.parse_args()
 
     tickers = [t.upper() for t in (args.tickers or [])]
@@ -433,12 +451,21 @@ def main() -> None:
         tickers += [t.upper() for t in args.extra_tickers]
     tickers = list(dict.fromkeys(tickers))
 
-    if not tickers:
-        print("Usage: ticker_scan.py TICKER1 TICKER2 ... [--json]")
+    if not tickers and not args.benchmark:
+        print("Usage: ticker_scan.py TICKER1 TICKER2 ... [--json] [--mode full] [--benchmark]")
         sys.exit(1)
 
-    if not args.as_json:
+    if not args.as_json and tickers:
         print(f"Scanning {len(tickers)} ticker(s): {', '.join(tickers)}\n")
+
+    if args.benchmark:
+        b = fetch_benchmark()
+        if args.as_json:
+            print(json.dumps(b))
+        else:
+            print(f"MARKET   env={b.get('market_env', '—')}  "
+                  f"SPY vs MA200={b.get('spy_vs_ma200_pct', '—')}%  "
+                  f"QQQ vs MA200={b.get('qqq_vs_ma200_pct', '—')}%")
 
     spy_closes = None
     if args.mode == "full":
@@ -447,18 +474,19 @@ def main() -> None:
         except Exception:
             pass
 
-    with ThreadPoolExecutor(max_workers=min(len(tickers), 8)) as ex:
-        futures = {ex.submit(fetch_ticker, tk, args.mode, spy_closes): tk for tk in tickers}
-        results: dict[str, dict] = {}
-        for f in as_completed(futures):
-            results[futures[f]] = f.result()
+    if tickers:
+        with ThreadPoolExecutor(max_workers=min(len(tickers), 8)) as ex:
+            futures = {ex.submit(fetch_ticker, tk, args.mode, spy_closes): tk for tk in tickers}
+            results: dict[str, dict] = {}
+            for f in as_completed(futures):
+                results[futures[f]] = f.result()
 
-    for tk in tickers:
-        r = results[tk]
-        if args.as_json:
-            print(json.dumps(r))
-        else:
-            print_result(r)
+        for tk in tickers:
+            r = results[tk]
+            if args.as_json:
+                print(json.dumps(r))
+            else:
+                print_result(r)
 
 
 if __name__ == "__main__":
