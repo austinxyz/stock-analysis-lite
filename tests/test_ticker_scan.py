@@ -1,6 +1,6 @@
 import pandas as pd
 
-from scripts.ticker_scan import ma_metrics, atr14, weighted_return_score
+from scripts.ticker_scan import ma_metrics, atr14, weighted_return_score, market_env, trend_template
 
 
 def test_ascending_series_all_positive_and_trend_up():
@@ -67,3 +67,46 @@ def test_weighted_return_score_flat_zero():
 def test_weighted_return_score_short_none():
     closes = pd.Series([float(x) for x in range(1, 253)])  # 252 bars
     assert weighted_return_score(closes) is None
+
+
+def _series(vals):
+    s = pd.Series(vals)
+    return s, s * 1.01, s * 0.99  # closes, highs, lows
+
+
+def test_trend_template_ascending_all_pass():
+    closes, highs, lows = _series([float(x) for x in range(1, 301)])
+    tt = trend_template(closes, highs, lows, rs_pass=True)
+    assert tt["score"] == 8
+    assert all(
+        tt[k]
+        for k in (
+            "p_gt_ma150_200", "ma150_gt_ma200", "ma200_uptrend",
+            "ma50_gt_ma150_200", "p_gt_ma50", "above_low_30",
+            "near_high_25", "rs_pass",
+        )
+    )
+
+
+def test_trend_template_descending_all_fail():
+    closes, highs, lows = _series([float(x) for x in range(300, 0, -1)])
+    tt = trend_template(closes, highs, lows, rs_pass=False)
+    assert tt["score"] == 0
+
+
+def test_trend_template_short_series_empty():
+    closes, highs, lows = _series([float(x) for x in range(1, 200)])  # 199 bars
+    assert trend_template(closes, highs, lows, rs_pass=True) == {}
+
+
+def test_trend_template_rs_none_counts_false():
+    closes, highs, lows = _series([float(x) for x in range(1, 301)])
+    tt = trend_template(closes, highs, lows, rs_pass=None)
+    assert tt["rs_pass"] is False and tt["score"] == 7
+
+
+def test_market_env_quadrants():
+    assert market_env(3.0, 5.0) == "bull"
+    assert market_env(-2.0, -1.0) == "bear"
+    assert market_env(3.0, -1.0) == "chop"
+    assert market_env(-3.0, 1.0) == "chop"

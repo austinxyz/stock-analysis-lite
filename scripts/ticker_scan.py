@@ -176,6 +176,58 @@ def weighted_return_score(closes: pd.Series) -> float | None:
     return round(score, 1)
 
 
+def trend_template(
+    closes: pd.Series,
+    highs: pd.Series,
+    lows: pd.Series,
+    rs_pass: bool | None,
+) -> dict:
+    """Evaluate the Minervini 8-point trend template. {} if <200 bars.
+
+    ma200_uptrend uses the same 21-bar/+0.5% rule as ma_metrics.
+    52-week window = last 252 bars (or all available if 200-251).
+    rs_pass=None is treated as False (data unavailable counts as fail).
+    """
+    if len(closes) < 200:
+        return {}
+    price = float(closes.iloc[-1])
+    ma50 = float(closes.rolling(50).mean().iloc[-1])
+    ma150 = float(closes.rolling(150).mean().iloc[-1])
+    ma200 = float(closes.rolling(200).mean().iloc[-1])
+
+    uptrend = False
+    if len(closes) >= 221:
+        ma200_series = closes.rolling(200).mean()
+        prev = ma200_series.iloc[-22]
+        if pd.notna(prev) and prev != 0:
+            uptrend = (float(ma200_series.iloc[-1]) / float(prev) - 1) * 100 > 0.5
+
+    hi52 = float(highs.iloc[-252:].max())
+    lo52 = float(lows.iloc[-252:].min())
+
+    checks = {
+        "p_gt_ma150_200": price > ma150 and price > ma200,
+        "ma150_gt_ma200": ma150 > ma200,
+        "ma200_uptrend": uptrend,
+        "ma50_gt_ma150_200": ma50 > ma150 and ma50 > ma200,
+        "p_gt_ma50": price > ma50,
+        "above_low_30": lo52 > 0 and price >= lo52 * 1.30,
+        "near_high_25": hi52 > 0 and price >= hi52 * 0.75,
+        "rs_pass": bool(rs_pass),
+    }
+    checks["score"] = sum(1 for v in checks.values() if v is True)
+    return checks
+
+
+def market_env(spy_vs_ma200_pct: float, qqq_vs_ma200_pct: float) -> str:
+    """SPY+QQQ both above MA200 -> bull; both below -> bear; else chop."""
+    if spy_vs_ma200_pct > 0 and qqq_vs_ma200_pct > 0:
+        return "bull"
+    if spy_vs_ma200_pct < 0 and qqq_vs_ma200_pct < 0:
+        return "bear"
+    return "chop"
+
+
 def fetch_ticker(tk: str) -> dict:
     try:
         t = yf.Ticker(tk)
