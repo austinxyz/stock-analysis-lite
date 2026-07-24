@@ -25,6 +25,15 @@ JSON fields per ticker (one line per ticker):
   ma200_trend     — "up"/"down"/"flat": MA200 vs 21 bars ago (omitted if <221 days)
   max_gap_up_pct  — largest single-day open gap-up in last 1y (proxy for earnings gap behaviour)
   error           — present only if fetch failed
+
+Full mode (--mode full) additional fields (each omitted when unavailable):
+  price / atr14 / atr_pct
+  vol_avg20_m / vol_ratio
+  high_52w / low_52w / pct_from_52w_high / pct_above_52w_low
+  rs_score / rs_pass          — weighted 3/6/9/12m return vs SPY (40/20/20/20)
+  trend_template              — Minervini 8-point booleans + score (0-8)
+  next_earnings_date / earnings_in_days
+  short_pct_float / float_m / shares_out_m / cash_m
 """
 import argparse
 import json
@@ -228,12 +237,12 @@ def market_env(spy_vs_ma200_pct: float, qqq_vs_ma200_pct: float) -> str:
     return "chop"
 
 
-def fetch_ticker(tk: str) -> dict:
+def fetch_ticker(tk: str, mode: str = "scan", spy_closes: pd.Series | None = None) -> dict:
     try:
         t = yf.Ticker(tk)
 
         # Price history — MAs + gap detection
-        h = t.history(period="1y", interval="1d")
+        h = t.history(period="2y" if mode == "full" else "1y", interval="1d")
         if len(h) < 10:
             return {"ticker": tk, "error": "insufficient price history"}
 
@@ -293,6 +302,92 @@ def fetch_ticker(tk: str) -> dict:
         if inst_pct is not None:
             result["inst_pct"] = inst_pct
         result.update(rev_metrics)
+
+        if mode == "full":
+            closes = h["Close"]
+            price = float(closes.iloc[-1])
+            result["price"] = round(price, 2)
+
+            a = atr14(h["High"], h["Low"], closes)
+            if a is not None:
+                result["atr14"] = round(a, 2)
+                result["atr_pct"] = round(a / price * 100, 1)
+
+            vol20 = h["Volume"].rolling(20).mean().iloc[-1]
+            if pd.notna(vol20) and vol20 > 0:
+                result["vol_avg20_m"] = round(float(vol20) / 1e6, 2)
+                result["vol_ratio"] = round(float(h["Volume"].iloc[-1]) / float(vol20), 2)
+
+            w = h.iloc[-252:]
+            hi52 = float(w["High"].max())
+            lo52 = float(w["Low"].min())
+            result["high_52w"] = round(hi52, 2)
+            result["low_52w"] = round(lo52, 2)
+            if hi52 > 0:
+                result["pct_from_52w_high"] = round((price / hi52 - 1) * 100, 1)
+            if lo52 > 0:
+                result["pct_above_52w_low"] = round((price / lo52 - 1) * 100, 1)
+
+            rs_pass: bool | None = None
+            stock_score = weighted_return_score(closes)
+            spy_score = weighted_return_score(spy_closes) if spy_closes is not None else None
+            if stock_score is not None and spy_score is not None:
+                rs_score = round(stock_score - spy_score, 1)
+                r12_stock = float(closes.iloc[-1]) / float(closes.iloc[-253]) - 1
+                r12_spy = float(spy_closes.iloc[-1]) / float(spy_closes.iloc[-253]) - 1
+                rs_pass = bool(rs_score > 0 and r12_stock > r12_spy)
+                result["rs_score"] = rs_score
+                result["rs_pass"] = rs_pass
+
+            tt = trend_template(closes, h["High"], h["Low"], rs_pass)
+            if tt:
+                result["trend_template"] = tt
+
+            try:
+                import datetime as _dt
+
+                cal = t.calendar
+                dates = cal.get("Earnings Date") if isinstance(cal, dict) else None
+                if dates:
+                    ed = dates[0]
+                    if hasattr(ed, "date"):
+                        ed = ed.date()
+                    days = (ed - _dt.date.today()).days
+                    if days >= 0:
+                        result["next_earnings_date"] = ed.isoformat()
+                        result["earnings_in_days"] = days
+            except Exception:
+                pass
+
+            try:
+                info = t.info
+                spf = info.get("shortPercentOfFloat")
+                if spf is not None:
+                    result["short_pct_float"] = round(spf * 100, 1)
+                fs = info.get("floatShares")
+                if fs:
+                    result["float_m"] = round(fs / 1e6, 1)
+                so = info.get("sharesOutstanding")
+                if so:
+                    result["shares_out_m"] = round(so / 1e6, 1)
+            except Exception:
+                pass
+
+            try:
+                qbal = t.quarterly_balance_sheet
+                if qbal is not None and not qbal.empty:
+                    for name in (
+                        "Cash And Cash Equivalents",
+                        "Cash Cash Equivalents And Short Term Investments",
+                    ):
+                        if name in qbal.index:
+                            v = qbal.loc[name].dropna()
+                            if len(v):
+                                result["cash_m"] = round(float(v.iloc[0]) / 1e6, 1)
+                                break
+            except Exception:
+                pass
+
         return result
 
     except Exception as e:
@@ -329,6 +424,8 @@ def main() -> None:
     parser.add_argument("--tickers", nargs="+", dest="extra_tickers", metavar="TICKER")
     parser.add_argument("--json", dest="as_json", action="store_true",
                         help="Output raw JSON lines (one per ticker)")
+    parser.add_argument("--mode", choices=("scan", "full"), default="scan",
+                        help="scan=批量筛选字段；full=单股深度字段（ATR/52w/RS/财报日等）")
     args = parser.parse_args()
 
     tickers = [t.upper() for t in (args.tickers or [])]
@@ -343,8 +440,15 @@ def main() -> None:
     if not args.as_json:
         print(f"Scanning {len(tickers)} ticker(s): {', '.join(tickers)}\n")
 
+    spy_closes = None
+    if args.mode == "full":
+        try:
+            spy_closes = yf.Ticker("SPY").history(period="2y", interval="1d")["Close"]
+        except Exception:
+            pass
+
     with ThreadPoolExecutor(max_workers=min(len(tickers), 8)) as ex:
-        futures = {ex.submit(fetch_ticker, tk): tk for tk in tickers}
+        futures = {ex.submit(fetch_ticker, tk, args.mode, spy_closes): tk for tk in tickers}
         results: dict[str, dict] = {}
         for f in as_completed(futures):
             results[futures[f]] = f.result()

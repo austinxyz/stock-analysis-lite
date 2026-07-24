@@ -49,7 +49,19 @@ yfinance 是 Python 库，必须由 Python 进程调用。所以流程是：
   "ma150_pct": 9.8,           // 现价偏离 MA150 %（历史不足 150 天时省略该键）
   "ma200_pct": 18.7,          // 现价偏离 MA200 %（历史不足 200 天时省略该键）
   "ma200_trend": "up",        // MA200 vs 21 交易日前："up"/"down"/"flat"（历史不足 221 天时省略该键）
-  "max_gap_up_pct": 14.2      // 过去 1 年最大单日跳空高开 %（财报 gap 信号）
+  "max_gap_up_pct": 14.2,      // 过去 1 年最大单日跳空高开 %（财报 gap 信号）
+
+  // ---- 以下字段仅 --mode full 输出（单股深度，各自缺数据省略）----
+  "price": 8.42,              // 最新收盘价
+  "atr14": 0.61, "atr_pct": 7.2,          // 14日ATR / 占现价%
+  "vol_avg20_m": 3.1, "vol_ratio": 1.8,   // 20日均量(百万股) / 今日量比
+  "high_52w": 12.4, "low_52w": 3.1,       // 52周高低
+  "pct_from_52w_high": -32.1, "pct_above_52w_low": 171.6,
+  "rs_score": 14.2, "rs_pass": true,      // RS加权收益差 vs SPY
+  "trend_template": {"score": 6},          // SEPA 8条布尔+score
+  "next_earnings_date": "2026-08-07", "earnings_in_days": 15,
+  "short_pct_float": 12.3, "float_m": 45.2, "shares_out_m": 51.0,
+  "cash_m": 88.5
 }
 ```
 
@@ -66,6 +78,9 @@ python scripts/ticker_scan.py MRVL MU QMCO --json
 
 # 单股验证
 python scripts/ticker_scan.py LWLG --json
+
+# 单股深度模式：ATR/52周/RS/趋势模板/财报日/筹码/现金
+python scripts/ticker_scan.py LWLG --mode full --json
 ```
 
 ---
