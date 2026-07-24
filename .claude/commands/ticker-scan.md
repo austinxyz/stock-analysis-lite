@@ -14,7 +14,7 @@
 
 ## 赛道名称映射表（用于模式检测和文件命名）
 
-| 中文输入 | 英文 ID（文件名用）| Chen 点名代表标的 |
+| 中文输入 | 英文 ID（文件名用）| 策略点名代表标的 |
 |---------|--------------|----------------|
 | 存储 / 存储记忆体 / storage | storage | MU MRVL QMCO GSIT |
 | 光互连 / 光电互连 / optical | optical | COHR CRDO AAOI AXTI NOK OCC LWLG MXL |
@@ -42,7 +42,7 @@ Read `data/config.md`, extract `lang` (default `zh`). If `--lang zh|en` passed, 
 
 ### 1. 构建候选池
 
-**① Chen 基础池**
+**① 策略基础池**
 根据 MODE 从上方映射表读取目标赛道 ticker。
 - discovery mode → 全部七大赛道所有标的
 - sector mode → 该赛道标的
@@ -69,7 +69,7 @@ WebSearch: "[sector keyword] small cap stock NYSE Nasdaq 2025 2026 growth"
 **③ --tickers 追加**
 `--tickers` 中的 ticker 追加到池，直接进 Stage 2（skip Stage 1 cutoff）。
 
-最终候选池去重。记录：`Chen点名 X + 新发现 Y + --tickers Z`
+最终候选池去重。记录：`策略点名 X + 新发现 Y + --tickers Z`
 
 ---
 
@@ -85,7 +85,7 @@ python scripts/ticker_scan.py <全部候选 ticker> --json
 
 ---
 
-### 3. Stage 1 — 2A 九大特征（LLM + yfinance，Chen 点名标的用；新发现/--tickers 跳过 cutoff）
+### 3. Stage 1 — 2A 九大特征（LLM + yfinance，策略点名标的用；新发现/--tickers 跳过 cutoff）
 
 对每个候选 ticker，结合 `scan_data` 和 LLM 知识，逐条评估：
 
@@ -104,7 +104,7 @@ python scripts/ticker_scan.py <全部候选 ticker> --json
 **评分**：命中 X/9。
 
 **晋级规则**：
-- Chen 基础池标的：≥2/9 → 进 Stage 2
+- 策略基础池标的：≥2/9 → 进 Stage 2
 - `[NEW]`（WebSearch 新发现）：直接进 Stage 2（LLM 可能不熟悉）
 - `--tickers` 标的：直接进 Stage 2
 - single-stock mode：直接进 Stage 2
@@ -125,7 +125,7 @@ python scripts/ticker_scan.py <全部候选 ticker> --json
 | 2 | 营收进入爆发期 | **yfinance** | `revenue_yoy_pct > 50` 或 `revenue_accel == true` → ✅；>20 → ⚠️ |
 | 3 | 订单储备 > 当年营收 | WebSearch | query: `"[TICKER] backlog order book 2025 2026"` → 找具体数字；无数据 → ⚠️ |
 | 4 | 技术壁垒高 | LLM | 专利保护/独家合同/工艺护城河？ |
-| 5 | 机构开始建仓 | **yfinance** | `inst_pct > 5` → ⚠️；`inst_pct > 15` 且趋势上升 → ✅ |
+| 5 | 机构开始建仓 | **yfinance** | `inst_pct > 15` → ✅；5–15 → ⚠️；<5 或无数据 → LLM 判断 |
 | 6 | 小市值 + 主板上市 | **yfinance** | `is_otc == false AND market_cap_m < 2000` → ✅；2000–5000 → ⚠️；>5000 → ❌ |
 
 **五大公式（必要条件，binary ✓/✗）：**
@@ -149,7 +149,7 @@ python scripts/ticker_scan.py <全部候选 ticker> --json
 | # | 标准 | 数据来源 | 判断 | 输出 |
 |---|------|---------|------|------|
 | 1 | 营收/盈利 YoY >20%，或亏损收窄 >50% | **yfinance** | `revenue_yoy_pct > 20` 或 `eps_trend == "improving"/"loss→profit"` | ✅/⚠️/❌ + 具体数字 |
-| 2 | 积压订单覆盖 ≥2 季度收入 | WebSearch | query: `"[TICKER] backlog guidance Q1 Q2 2026"` | ✅/⚠️/❌ + 原文摘录 |
+| 2 | 积压订单覆盖 ≥2 季度收入（客户集中度可接受？）| WebSearch | query: `"[TICKER] backlog guidance Q1 Q2 2026"`，顺带留意客户集中度；集中度无数据 → 注明 ⚠️ 不影响主判定 | ✅/⚠️/❌ + 原文摘录 |
 | 3 | 连续 ≥3 季度正向增长 | **yfinance** | `consecutive_growth_q >= 3` | ✅/⚠️/❌ + 季度数 |
 | 4 | 盈利拐点出现（亏→盈） | **yfinance** | `eps_trend == "loss→profit"` | ✅/⚠️/❌ |
 | 5 | 价格结构配合（区分 Stage2 健康 vs Stage1 未确认反转）| **yfinance** | 四条子检查见下 | ✅/⚠️/❌ + MA 数字 |
@@ -199,7 +199,7 @@ python scripts/ticker_scan.py <全部候选 ticker> --json
 ```
 ## /ticker-scan [赛道|ALL] — YYYY-MM-DD
 
-候选池：N 只（Chen点名 X + 新发现 Y + --tickers Z）
+候选池：N 只（策略点名 X + 新发现 Y + --tickers Z）
 Stage 1 通过：N 只 | Stage 2 通过：N 只 | Stage 3 评估：N 只
 
 ### 综合排名
@@ -218,7 +218,7 @@ Stage 1 通过：N 只 | Stage 2 通过：N 只 | Stage 3 评估：N 只
 | MXL | Stage 2 | 六大类型 2/6，公式 2/5（营收下滑）|
 | SIDU | OTC排除 | OTC 非主板上市 |
 
-### 新发现（WebSearch 发现，非 Chen 点名）
+### 新发现（WebSearch 发现，非策略点名）
 - [TICKER] — 赛道：[X] | 市值：$XM | 交易所：Nasdaq | [1句发现理由]
 
 ### 赛道结论
@@ -232,7 +232,7 @@ Stage 1 通过：N 只 | Stage 2 通过：N 只 | Stage 3 评估：N 只
 - ⏳ 等待触发：[Ticker] — 需要什么条件（具体价格/事件/季报）
 - ❌ 暂不考虑：[Ticker] — 原因（趋势破位/EPS下滑/超买）
 
-**赛道空白信号：** 本赛道是否存在 Chen 尚未点名但值得跟踪的潜力标的？（如有，列出；如无，写"暂无明显空白"）
+**赛道空白信号：** 本赛道是否存在 策略尚未点名但值得跟踪的潜力标的？（如有，列出；如无，写"暂无明显空白"）
 
 **下一步行动：** `/stock-analyze <TICKER>` 对 🔥/⭐ 做完整深度分析；👀 等触发条件后再跑 `/ticker-scan <TICKER>` 单股验证。🔥 候选若带"独立复核不一致"警示，先人工确认价格结构再决定是否进 `/stock-analyze`
 ```

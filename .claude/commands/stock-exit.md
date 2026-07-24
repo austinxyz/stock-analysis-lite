@@ -1,6 +1,6 @@
 # stock-exit
 
-基于 Moneyball 框架，给出翻倍候选股的止损触发逻辑、止盈节奏和减仓建议。
+基于免费股策略（hot-sector）+ SEPA 止损纪律 + Moneyball 目标价管理，给出翻倍候选股的止损触发逻辑、止盈节奏和减仓建议。
 
 ## Arguments
 
@@ -13,39 +13,19 @@ Required: `<TICKER>` — 股票代码（如 `ABAT`）
 检查 `data/tickers/[TICKER]/entry-*.md`（最新一份）提取：
 - 入场价、止损位、目标1、目标2、入场日期
 - 是否已触发自由股规则（+100%）
+- `wiki/tickers/[TICKER]/analysis.md` 的 Moneyball EV / Bull / Bear 目标价（无则跳过 EV 对照）
 
 如无入场文件，让用户提供：入场价、止损价、当前持仓比例。
 
 ---
 
-### 2. 拉取当前价格数据（yfinance）
+### 2. 拉取当前数据（共用数据层）
 
-```python
-import yfinance as yf
-import pandas as pd
-
-t = yf.Ticker("TICKER")
-hist = t.history(period="1y")
-
-high_low   = hist['High'] - hist['Low']
-high_close = abs(hist['High'] - hist['Close'].shift())
-low_close  = abs(hist['Low']  - hist['Close'].shift())
-tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
-atr14 = tr.rolling(14).mean().iloc[-1]
-
-price  = hist['Close'].iloc[-1]
-ma50   = hist['Close'].rolling(50).mean().iloc[-1]
-ma150  = hist['Close'].rolling(150).mean().iloc[-1]
-ma200  = hist['Close'].rolling(200).mean().iloc[-1]
-
-vol_today = hist['Volume'].iloc[-1]
-vol_avg20 = hist['Volume'].rolling(20).mean().iloc[-1]
-vol_ratio = vol_today / vol_avg20
-
-print(f"现价={price:.2f}  ATR14={atr14:.2f}({atr14/price*100:.1f}%)")
-print(f"MA50={ma50:.2f}  MA150={ma150:.2f}  MA200={ma200:.2f}")
-print(f"成交量比={vol_ratio:.1f}x")
+```bash
+python scripts/ticker_scan.py TICKER --mode full --json
 ```
+
+使用字段：`price`、`atr14`、`atr_pct`、`ma50_pct`/`ma150_pct`/`ma200_pct`、`vol_ratio`、`ma200_trend`。
 
 ---
 
@@ -137,6 +117,7 @@ print(f"成交量比={vol_ratio:.1f}x")
 | 目标1（减 25-30%）| $X（+30-50%）| [已到达 / 未到达，距 X%] |
 | 目标2 | $X（+80-150%）| [状态] |
 | 自由股触发 | $X（+100%）| [未触发 / ✅ 已触发] |
+| Moneyball EV 对照 | EV $X / Bull $X | 现价 > Bull 目标 → ⚠️ 估值透支，考虑加速减仓 |
 
 ## Stage 信号
 - 当前 Stage：[2保持 / 3警告 / 4清仓]
