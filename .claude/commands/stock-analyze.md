@@ -8,48 +8,20 @@ Required: `<TICKER>` — 股票代码（如 `ABAT`）
 
 ## Steps
 
-### 1. 拉取量化数据（yfinance）
+### 1. 拉取量化数据（共用数据层）
 
-```python
-import yfinance as yf
-import pandas as pd
-
-t = yf.Ticker("TICKER")
-info = t.info
-
-hist = t.history(period="1y")
-price  = hist['Close'].iloc[-1]
-ma50   = hist['Close'].rolling(50).mean().iloc[-1]
-ma150  = hist['Close'].rolling(150).mean().iloc[-1]
-ma200  = hist['Close'].rolling(200).mean().iloc[-1]
-hi52   = hist['High'].rolling(252).max().iloc[-1]
-lo52   = hist['Low'].rolling(252).min().iloc[-1]
-
-# ATR-14
-high_low   = hist['High'] - hist['Low']
-high_close = abs(hist['High'] - hist['Close'].shift())
-low_close  = abs(hist['Low']  - hist['Close'].shift())
-tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
-atr14 = tr.rolling(14).mean().iloc[-1]
-atr_pct = atr14 / price * 100
-
-# 财务
-qfin = t.quarterly_financials
-qbal = t.quarterly_balance_sheet
-revenue = qfin.loc['Total Revenue'] if 'Total Revenue' in qfin.index else None
-gross   = qfin.loc['Gross Profit']  if 'Gross Profit'  in qfin.index else None
-cash    = qbal.loc['Cash And Cash Equivalents'].iloc[0] if 'Cash And Cash Equivalents' in qbal.index else None
-
-shares_out = info.get('sharesOutstanding', None)
-short_pct  = info.get('shortPercentOfFloat', 0) * 100
-float_sh   = info.get('floatShares', None)
-market_cap = info.get('marketCap', 0)
-
-print(f"价格={price:.2f}  市值={market_cap/1e9:.1f}B  ATR%={atr_pct:.1f}%")
-print(f"MA50={ma50:.2f}  MA150={ma150:.2f}  MA200={ma200:.2f}")
-print(f"52周高={hi52:.2f}  低={lo52:.2f}")
-print(f"空头={short_pct:.1f}%  现金={cash/1e6:.1f}M" if cash else "")
+```bash
+python scripts/ticker_scan.py TICKER --mode full --benchmark --json
 ```
+
+输出两行 JSON：第一行 benchmark（`spy_vs_ma200_pct` / `qqq_vs_ma200_pct` / `market_env`），第二行 ticker 深度数据。本报告使用的关键字段：
+
+- 价格/波动：`price`、`atr14`、`atr_pct`、`ma50_pct`、`ma150_pct`、`ma200_pct`、`ma200_trend`
+- 52 周位置：`high_52w`、`low_52w`、`pct_from_52w_high`、`pct_above_52w_low`
+- SEPA：`trend_template`（8 条布尔 + score）、`rs_score`、`rs_pass`
+- 财务：`revenue_yoy_pct`、`consecutive_growth_q`、`eps_trend`、`cash_m`、`market_cap_m`
+- 筹码：`short_pct_float`、`float_m`、`shares_out_m`、`inst_pct`
+- 日历：`next_earnings_date`、`earnings_in_days`
 
 ---
 
@@ -73,6 +45,16 @@ print(f"空头={short_pct:.1f}%  现金={cash/1e6:.1f}M" if cash else "")
 | **A — Analytical** | 分析师覆盖少？财务数字被误读？ | 3=明显；0=无 |
 | **I — Informational** | 10-Q 注脚有隐藏信息？市场未发现？ | 3=明显；0=无 |
 | **T — Technical** | 指数剔除/强制清仓等技术性抛压？ | 3=明显；0=无 |
+
+**各维度评分判据（对齐 `wiki/frameworks/bait.md`）：**
+
+- **B**：可识别的情绪催化剂？恐惧是否被财报数据证伪？short interest >10% = 高、>20% = 极端
+- **A**：自建模型 vs 共识差 >20%（关键指标）？覆盖分析师 <3 名？有被媒体/卖方跳过的具体财务行项？
+- **I**：transcript Q&A / 10-K 注脚 / proxy / investor day 中有具体、可量化、未被报道的信息？
+- **T**：多个技术因素在同一价位汇聚？（高空头 + 回购 + 指数机制 + 期权结构）
+
+**Overlap 换算（裁决以此为准，/12 总分仅展示）：**
+`overlap = (B≥2) + (A≥2) + (I≥2) + (T≥2)` → 1 弱 / 2 中等 / 3 强 / 4 极强（对应 bait.md 裁决表）
 
 **解读：** ≥8 强烈错误定价；5-7 有迹象；≤4 市场定价可能已充分
 
@@ -123,7 +105,9 @@ print(f"空头={short_pct:.1f}%  现金={cash/1e6:.1f}M" if cash else "")
 | 5 | Price > MA50 | ✅/❌ |
 | 6 | Price ≥ 52周低点 +30% | ✅/❌ |
 | 7 | Price 在52周高点 25% 以内 | ✅/❌ |
-| 8 | 相对强度 > 70百分位 | ✅/⚠️/❌ |
+| 8 | 相对强度跑赢大盘（`rs_pass`，代理 IBD RS>70）| ✅/❌ + rs_score |
+
+8 条状态直接读 Step 1 的 `trend_template` 字段（`score` = X/8）；#8 用 `rs_pass` 判定并附 `rs_score` 数字（正 = 跑赢 SPY 加权收益）。禁止在无数据时凭印象打 ✅。
 
 **Stage 判断：**
 
@@ -141,7 +125,32 @@ print(f"空头={short_pct:.1f}%  现金={cash/1e6:.1f}M" if cash else "")
 
 ---
 
-### 6. 综合结论
+### 6. Moneyball 情景 EV（对齐 `wiki/frameworks/moneyball.md`）
+
+三情景概率和必须 = 100%。每个情景给终值算式（`[年] EBITDA/营收 $X × [倍数] = $Z/股`）。
+
+| 情景 | 目标价 | 时间跨度 | 关键假设（2-3条） | 概率 |
+|------|--------|---------|------------------|------|
+| 🐂 Bull | $X | X 年 | ... | 20-35% |
+| Base | $Y | X 年 | ... | 45-60% |
+| 🐻 Bear | $Z | X 年 | ... | 15-30% |
+
+```
+EV = Bull×P + Base×P + Bear×P
+Expected Return = (EV − 现价) / 现价
+Asymmetry = Bull 上行% / Bear 下行%
+```
+
+**必答三问：**
+1. Bear 成立需要什么为真？当前数据支持吗？
+2. Bear 是否已 priced in？（已跌 30%+ 时 bear 数学要重算）
+3. 解决不确定性的具体催化剂是什么？（下次财报 / FDA / 合同）
+
+**PW EV 触发线**（synthesis.md 优先级规则）：现价 > EV × 0.85 → 即使 BAIT 强、SEPA 好也不追。
+
+---
+
+### 7. 综合结论
 
 必须包含：
 1. BAIT 结论（市场错在哪里，一句话）
@@ -151,7 +160,7 @@ print(f"空头={short_pct:.1f}%  现金={cash/1e6:.1f}M" if cash else "")
 
 ---
 
-### 7. 输出报告
+### 8. 输出报告
 
 保存到 `wiki/tickers/[TICKER]/analysis.md`：
 
@@ -177,6 +186,7 @@ print(f"空头={short_pct:.1f}%  现金={cash/1e6:.1f}M" if cash else "")
 | **T — Technical** | X/3 | [1句] |
 
 **总评：X/12 — [强/中/弱]错误定价信号**
+**Overlap：X 因子重叠 — [弱/中等/强/极强]**
 
 > "[1-2句总结：市场错在哪里]"
 
@@ -219,13 +229,26 @@ print(f"空头={short_pct:.1f}%  现金={cash/1e6:.1f}M" if cash else "")
 
 ---
 
-## 六、风险
+## 六、Moneyball 情景 EV
+
+| 情景 | 目标价 | 概率 | 关键假设 |
+|------|--------|------|---------|
+| 🐂 Bull | $X | X% | [1-2句] |
+| Base | $Y | Y% | [1-2句] |
+| 🐻 Bear | $Z | Z% | [1-2句] |
+
+**EV：$W | 现价：$P | 预期收益：+X% | 非对称比：X:1**
+**PW EV 触发线：现价 [≤/＞] EV×0.85 = $X → [可追 / 不追]**
+
+---
+
+## 七、风险
 | 风险 | 级别 | 说明 |
 |------|------|------|
 
 ---
 
-## 七、结论
+## 八、结论
 
 **评级：[🔥 强烈关注 / ⭐ 关注候选 / 👀 观察 / ❌ 回避]**
 
@@ -242,6 +265,6 @@ print(f"空头={short_pct:.1f}%  现金={cash/1e6:.1f}M" if cash else "")
 ---
 
 *数据来源：yfinance（YYYY-MM-DD）、WebSearch*
-*框架：Mauboussin BAIT | Minervini SEPA*
+*框架：Mauboussin BAIT | Minervini SEPA | Moneyball EV*
 *上游：`/ticker-scan` | 下游：`/stock-entry [TICKER]`*
 ```
