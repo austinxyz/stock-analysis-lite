@@ -19,32 +19,13 @@ Required: `<TICKER>` — 股票代码（如 `ABAT`）
 
 ---
 
-### 2. 拉取当前价格数据 + ATR（yfinance）
+### 2. 拉取当前数据（共用数据层）
 
-```python
-import yfinance as yf
-import pandas as pd
-
-t = yf.Ticker("TICKER")
-hist = t.history(period="1y")
-
-high_low   = hist['High'] - hist['Low']
-high_close = abs(hist['High'] - hist['Close'].shift())
-low_close  = abs(hist['Low']  - hist['Close'].shift())
-tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
-atr14 = tr.rolling(14).mean().iloc[-1]
-atr_pct = atr14 / hist['Close'].iloc[-1] * 100
-
-price  = hist['Close'].iloc[-1]
-ma50   = hist['Close'].rolling(50).mean().iloc[-1]
-ma150  = hist['Close'].rolling(150).mean().iloc[-1]
-ma200  = hist['Close'].rolling(200).mean().iloc[-1]
-vol_avg20 = hist['Volume'].rolling(20).mean().iloc[-1]
-
-print(f"价格={price:.2f} MA50={ma50:.2f} MA150={ma150:.2f} MA200={ma200:.2f}")
-print(f"ATR14={atr14:.2f}  ATR%={atr_pct:.1f}%")
-print(f"20日均量={vol_avg20/1e6:.1f}M")
+```bash
+python scripts/ticker_scan.py TICKER --mode full --benchmark --json
 ```
+
+使用字段：`price`、`atr14`、`atr_pct`、`ma50_pct`/`ma150_pct`/`ma200_pct`、`vol_avg20_m`、`vol_ratio`、`trend_template.score`、`earnings_in_days`、benchmark 行 `market_env`。
 
 ---
 
@@ -54,8 +35,10 @@ print(f"20日均量={vol_avg20/1e6:.1f}M")
 - [ ] 趋势模板得分 ≥ 3/8
 - [ ] 有明确轴心点（平台突破口 / VCP / 杯柄形态）
 - [ ] 突破时成交量放大（量比 ≥ 1.5×）
+- [ ] 财报距离：`earnings_in_days > 14`（≤14 → ⚠️ SEPA 规则：财报前 2 周不入场，结论标"等财报后"）
+- [ ] 市场环境（`market_env`）：`bear` → ❌ 不建新仓（SEPA 第六节主开关）；`chop` → 单笔风险降至 0.5%；`bull` → 1%
 
-**入场区间：** 轴心点上方 0-3% 为理想区。超出 1 ATR 以上不追。
+**入场区间：** 轴心价 → +5% 为买入区（0-3% 理想）。超过 +5% 不追，等下次形态（SEPA 原典口径）。
 
 ---
 
@@ -86,6 +69,12 @@ print(f"20日均量={vol_avg20/1e6:.1f}M")
 R/R(T1) = (目标1 - 入场价) / (入场价 - 止损价)  → 要求 ≥ 2:1
 ```
 
+**Moneyball PW EV 触发线（必查）：**
+读 `wiki/tickers/[TICKER]/analysis.md` 的「Moneyball 情景 EV」节：
+- 现价 ≤ EV × 0.85 → ✅ 有安全边际，可执行入场
+- 现价 > EV × 0.85 → ❌ 不追，等回调或等 EV 重估（synthesis.md 优先级规则 #5）
+- analysis.md 无 EV 节 → 先重跑 `/stock-analyze [TICKER]`
+
 **自由股规则：** 达到 +100% 时 → 卖出 50% 锁利，剩余 50% 零成本持有，目标 3-5×
 
 ---
@@ -93,8 +82,8 @@ R/R(T1) = (目标1 - 入场价) / (入场价 - 止损价)  → 要求 ≥ 2:1
 ### 6. 仓位大小（风险预算法）
 
 ```
-单笔风险 = 总资金 × 1%
-建议股数 = (总资金 × 1%) ÷ (入场价 - 止损价)
+单笔风险 = 总资金 × R%（R 由 market_env 决定：bull=1%，chop=0.5%，bear=不建仓）
+建议股数 = (总资金 × R%) ÷ (入场价 - 止损价)
 ```
 
 示例：总资金 $10,000，入场 $10，止损 $8.50（止损幅度 $1.50）
@@ -135,6 +124,9 @@ Section 6 计算的股数 = 总计划股数，分三批入场：
 - 现价：$X | Stage：X | 趋势模板：X/8
 - 入场条件：[✅ 满足 / ⚠️ 部分满足 / ❌ 不满足]
 - ATR14：$X（当前价的 X%）
+- 市场环境：[bull / chop / bear]（SPY vs MA200 X% | QQQ X%）→ 单笔风险 R%
+- 财报距离：X 天 [✅ >14 / ⚠️ ≤14 等财报后]
+- PW EV 对照：现价 $X vs EV×0.85 = $X → [✅ 可入 / ❌ 不追]
 
 ## 入场方案
 
