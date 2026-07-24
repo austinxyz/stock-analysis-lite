@@ -144,6 +144,38 @@ def ma_metrics(closes: pd.Series) -> dict:
     return out
 
 
+RS_WINDOWS = ((63, 0.4), (126, 0.2), (189, 0.2), (252, 0.2))
+
+
+def atr14(high: pd.Series, low: pd.Series, close: pd.Series) -> float | None:
+    """14-day ATR (simple rolling mean of True Range). None if <15 bars."""
+    if len(close) < 15:
+        return None
+    prev = close.shift(1)
+    tr = pd.concat(
+        [high - low, (high - prev).abs(), (low - prev).abs()], axis=1
+    ).max(axis=1)
+    val = tr.rolling(14).mean().iloc[-1]
+    return float(val) if pd.notna(val) else None
+
+
+def weighted_return_score(closes: pd.Series) -> float | None:
+    """Minervini-style weighted return: 40% 3m + 20% each 6/9/12m (%, rounded).
+
+    Trading-day windows 63/126/189/252 bars. None if <253 bars.
+    """
+    if len(closes) < 253:
+        return None
+    price = float(closes.iloc[-1])
+    score = 0.0
+    for bars, weight in RS_WINDOWS:
+        past = float(closes.iloc[-(bars + 1)])
+        if past == 0:
+            return None
+        score += weight * (price / past - 1) * 100
+    return round(score, 1)
+
+
 def fetch_ticker(tk: str) -> dict:
     try:
         t = yf.Ticker(tk)
