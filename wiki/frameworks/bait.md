@@ -106,6 +106,8 @@ Mechanical, non-fundamental price pressure creates a temporary mis-entry point.
 | 3 factors | Strong — high conviction, consider full-size position |
 | 4 factors | Very Strong — maximum conviction, prioritize over other names |
 
+**本 wiki /stock-analyze 换算规则**：skill 使用 0-3 分 × 4 维 = /12 制展示粒度；裁决换算 `overlap = (B≥2)+(A≥2)+(I≥2)+(T≥2)`，overlap 数对应上表（1 弱 / 2 中 / 3 强 / 4 极强）。/12 总分仅作展示，裁决以 overlap 为准。
+
 **Template verdict format** (used in thesis.md Section 12):
 > "WING presents a B+A+T triple overlap: [1-sentence on B], [1-sentence on A], [1-sentence on T].
 > Informational (I) signal is moderate. Overall: High conviction."
