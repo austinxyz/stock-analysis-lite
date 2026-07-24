@@ -332,17 +332,23 @@ def fetch_ticker(tk: str, mode: str = "scan", spy_closes: pd.Series | None = Non
             vol20 = h["Volume"].rolling(20).mean().iloc[-1]
             if pd.notna(vol20) and vol20 > 0:
                 result["vol_avg20_m"] = round(float(vol20) / 1e6, 2)
-                result["vol_ratio"] = round(float(h["Volume"].iloc[-1]) / float(vol20), 2)
+                vol_last = h["Volume"].iloc[-1]
+                if pd.notna(vol_last):
+                    result["vol_ratio"] = round(float(vol_last) / float(vol20), 2)
 
             w = h.iloc[-252:]
-            hi52 = float(w["High"].max())
-            lo52 = float(w["Low"].min())
-            result["high_52w"] = round(hi52, 2)
-            result["low_52w"] = round(lo52, 2)
-            if hi52 > 0:
-                result["pct_from_52w_high"] = round((price / hi52 - 1) * 100, 1)
-            if lo52 > 0:
-                result["pct_above_52w_low"] = round((price / lo52 - 1) * 100, 1)
+            hi52 = w["High"].max()
+            lo52 = w["Low"].min()
+            if pd.notna(hi52):
+                hi52 = float(hi52)
+                result["high_52w"] = round(hi52, 2)
+                if hi52 > 0:
+                    result["pct_from_52w_high"] = round((price / hi52 - 1) * 100, 1)
+            if pd.notna(lo52):
+                lo52 = float(lo52)
+                result["low_52w"] = round(lo52, 2)
+                if lo52 > 0:
+                    result["pct_above_52w_low"] = round((price / lo52 - 1) * 100, 1)
 
             rs_pass: bool | None = None
             stock_score = weighted_return_score(closes)
