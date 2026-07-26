@@ -243,6 +243,7 @@ def fetch_benchmark() -> dict:
     for sym, key in (("SPY", "spy_vs_ma200_pct"), ("QQQ", "qqq_vs_ma200_pct")):
         try:
             h = yf.Ticker(sym).history(period="2y", interval="1d")
+            h = h[h["Close"].notna()]
             m = ma_metrics(h["Close"])
             if "ma200_pct" in m:
                 out[key] = m["ma200_pct"]
@@ -259,6 +260,9 @@ def fetch_ticker(tk: str, mode: str = "scan", spy_closes: pd.Series | None = Non
 
         # Price history — MAs + gap detection
         h = t.history(period="2y" if mode == "full" else "1y", interval="1d")
+        # Drop trailing rows with no Close (yfinance sometimes emits a phantom
+        # all-NaN row for the latest session, which poisons price/MA/RS).
+        h = h[h["Close"].notna()]
         if len(h) < 10:
             return {"ticker": tk, "error": "insufficient price history"}
 
@@ -476,7 +480,7 @@ def main() -> None:
     spy_closes = None
     if args.mode == "full":
         try:
-            spy_closes = yf.Ticker("SPY").history(period="2y", interval="1d")["Close"]
+            spy_closes = yf.Ticker("SPY").history(period="2y", interval="1d")["Close"].dropna()
         except Exception:
             pass
 
