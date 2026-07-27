@@ -12,6 +12,7 @@
 
 ## Global Constraints
 
+- **隐私边界（用户裁决 2026-07-27）**：`data/positions.md` 与 `data/tickers/` 被 `.gitignore` 故意排除（真实交易数据不进 git），**永不 commit**；可进 git 的产出只有 `wiki/lessons.md`（教训规则，不含仓位金额）与 `data/` 之外的文件
 - 不修改 `scripts/ticker_scan.py`、不新建常驻 Python 脚本（事后走势用临时 `python -c` 调 yfinance）
 - 不做券商对接、不做定时任务、不自动改 `wiki/frameworks/*.md`
 - 所有新文件 UTF-8；命令文件风格对齐现有 `.claude/commands/*.md`（中文、Steps 编号、输出模板代码块）
@@ -52,12 +53,11 @@
 Run: `python -c "import io; t=io.open('data/positions.md',encoding='utf-8').read(); assert '| 2026-06-15 | ABAT | BUY | 4.25 | 100 |' in t and '| INTT | BUY | 18.00 |' in t; print('OK')"`
 Expected: `OK`
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 3: 确认不入 git**
 
-```bash
-git add data/positions.md
-git commit -m "feat(data): positions.md 交易日志格式 + ABAT/INTT 历史成交种子"
-```
+`data/positions.md` 在 `.gitignore` 中，**不 commit**（隐私边界，见 Global Constraints）。本任务无 git 提交，交付物为本地文件。
+Run: `git status --short data/positions.md`
+Expected: 无输出（被 ignore，未跟踪）
 
 ---
 
@@ -505,9 +505,11 @@ Expected：`data/reviews/summary-<今日>.md` 存在；含 1 轮已复盘（ABAT
 对 ABAT 模拟执行 `/stock-entry ABAT` 的 Step 0（只做教训检查，不产出完整入场计划）：读 lessons.md + 跑 `python scripts/ticker_scan.py ABAT --mode full --json` 判断当前 Stage。
 Expected：若 ABAT 仍非 Stage 2，输出含 `⚠️ 教训警告 [L001]`
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 4: Commit（仅 lessons.md）**
+
+`data/tickers/ABAT/review-*.md` 与 `data/reviews/` 属私有交易数据，**不 commit**（隐私边界）。`data/reviews/` 若未被 ignore，先在 `.gitignore` 追加 `data/reviews/` 一行。
 
 ```bash
-git add data/tickers/ABAT/ data/reviews/ wiki/lessons.md
-git commit -m "feat(review): ABAT 首轮复盘 + ALL 汇总（验收 /stock-review 闭环）"
+git add wiki/lessons.md .gitignore
+git commit -m "feat(review): lessons.md 首批教训（ABAT 复盘产出）+ data/reviews 入 ignore"
 ```
