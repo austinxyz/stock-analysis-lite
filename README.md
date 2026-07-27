@@ -1,6 +1,6 @@
 # Stock Analysis Lite — Session 3 课程工具包
 
-Session 3「AI 炒股分析系统」配套工具包。包含 4 个核心 skills，只需 yfinance，无需配置复杂 MCP。
+Session 3「AI 炒股分析系统」配套工具包。包含 5 个核心 skills，只需 yfinance，无需配置复杂 MCP。
 
 ## 快速开始
 

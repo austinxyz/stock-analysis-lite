@@ -62,6 +62,7 @@ for d, r in h.iterrows():
 ### 5. 输出报告
 
 保存到 `data/tickers/[TICKER]/review-[YYYY-MM-DD].md`（日期=复盘日）：
+> 产出属私有交易数据（`.gitignore` 已排除 `data/` 相关路径），**勿 commit**。
 
 ```markdown
 # [TICKER] 交易复盘 — YYYY-MM-DD
@@ -118,6 +119,7 @@ for d, r in h.iterrows():
 ### 3. 输出
 
 保存到 `data/reviews/summary-[YYYY-MM-DD].md`：
+> 产出属私有交易数据（`.gitignore` 已排除 `data/` 相关路径），**勿 commit**。
 
 ```markdown
 # 交易复盘汇总 — YYYY-MM-DD
