@@ -44,6 +44,7 @@ yfinance 是 Python 库，必须由 Python 进程调用。所以流程是：
   "revenue_accel": true,      // 营收增速是否在加快
   "consecutive_growth_q": 4,  // 连续几个季度营收正增长
   "eps_trend": "improving",   // loss→profit / profit→loss / improving / declining / stable / unknown
+  "eps_loss_narrow_pct": 42.3, // 仍亏损时的YoY亏损收窄%（本季度和去年同季度都亏损才输出；正数=亏损收窄）
   "inst_pct": 71.3,           // 机构持仓 %（null = 无数据）
   "ma50_pct": 4.2,            // 现价偏离 MA50 %（正数 = 在 MA50 上方；历史不足时省略该键）
   "ma150_pct": 9.8,           // 现价偏离 MA150 %（历史不足 150 天时省略该键）
@@ -52,7 +53,11 @@ yfinance 是 Python 库，必须由 Python 进程调用。所以流程是：
   "max_gap_up_pct": 14.2,      // 抓取窗口内最大单日跳空高开 %（scan=1年 / full=2年；财报 gap 信号）
 
   // ---- 以下字段仅 --mode full 输出（单股深度，各自缺数据省略）----
-  "price": 8.42,              // 最新收盘价
+  "price": 8.42,              // 最新「已确认」日线收盘价（MA/ATR/trend_template 均基于同一根K线，口径一致）
+  "price_bar_date": "2026-07-23", // price 对应的K线日期
+  "latest_bar_missing": true,  // 仅当最近一个交易日日线在yfinance尚未补上时出现；出现时 price 落后一个交易日
+  "live_price": 8.05,          // 仅 latest_bar_missing=true 时出现：实时/最近成交价（可能与 price 有较大偏离）
+  "live_price_source": "fast_info", // live_price 来源："fast_info" 或 "info"
   "atr14": 0.61, "atr_pct": 7.2,          // 14日ATR / 占现价%
   "vol_avg20_m": 3.1, "vol_ratio": 1.8,   // 20日均量(百万股) / 今日量比
   "high_52w": 12.4, "low_52w": 3.1,       // 52周高低
@@ -108,3 +113,4 @@ python scripts/ticker_scan.py MRVL MU --benchmark --json
 - `revenue_yoy_pct` 需要至少 5 个季度数据，新股/新上市可能为 null
 - `inst_pct` 需要额外 HTTP 请求（较慢），小市值股可能无机构持仓数据
 - 不含实时新闻、订单 backlog、机构 13F 变化——这些由 LLM + WebSearch 处理
+- **日线数据延迟发布**：yfinance 偶尔整体延迟发布最近一个交易日的日线（观察到影响多只不相关ticker，非个股问题）。`--mode full` 下用 `latest_bar_missing` + `live_price` 兜底暴露这个信号，而不是静默返回落后一天的 `price`。**`--mode scan`（默认）没有这个兜底**——`max_gap_up_pct`/`ma*_pct` 等字段在此情况下仍可能基于落后一天的数据，需要时用 `--mode full` 交叉核实 `price_bar_date`

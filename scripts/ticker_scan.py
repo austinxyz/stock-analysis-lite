@@ -18,16 +18,30 @@ JSON fields per ticker (one line per ticker):
   revenue_accel   — bool: last QoQ growth > prior QoQ (null if <3Q data)
   consecutive_growth_q — quarters of consecutive revenue growth (from most recent)
   eps_trend       — "loss→profit" | "profit→loss" | "improving" | "declining" | "stable" | "unknown"
+  eps_loss_narrow_pct — % YoY loss narrowed (only present when still loss-making both
+                        this Q and same Q last year; positive = loss shrank)
   inst_pct        — institutional ownership % (null if unavailable)
   ma50_pct        — price vs 50-day MA (%)
   ma150_pct       — price vs 150-day MA (%, omitted if <150 days history)
   ma200_pct       — price vs 200-day MA (%, omitted if <200 days history)
   ma200_trend     — "up"/"down"/"flat": MA200 vs 21 bars ago (omitted if <221 days)
   max_gap_up_pct  — largest single-day open gap-up over fetched window (1y scan / 2y full; earnings gap proxy)
+  price_bar_date  — ISO date of the confirmed daily bar that ma*_pct/max_gap_up_pct key off
+                     (present in scan AND full mode)
+  latest_bar_missing — true when the most recent session's daily bar hasn't posted yet in
+                     yfinance (so every price-derived field above lags by a session); only
+                     present when true; present in scan AND full mode
+  live_price / live_price_source — best-effort live/most-recent quote (fast_info or
+                     .info), only present when latest_bar_missing is true — use this to
+                     catch a large gap between the confirmed bar and reality; present in
+                     scan AND full mode
   error           — present only if fetch failed
 
 Full mode (--mode full) additional fields (each omitted when unavailable):
-  price / atr14 / atr_pct
+  price                — close of the latest CONFIRMED daily bar (same bar as
+                          price_bar_date; MAs/ATR/trend_template all key off it too, so
+                          they stay internally consistent with each other)
+  atr14 / atr_pct
   vol_avg20_m / vol_ratio
   high_52w / low_52w / pct_from_52w_high / pct_above_52w_low
   rs_score / rs_pass          — weighted 3/6/9/12m return vs SPY (40/20/20/20)
@@ -88,19 +102,7 @@ def _revenue_metrics(fin: pd.DataFrame) -> dict:
     return result
 
 
-def _eps_trend(fin: pd.DataFrame) -> str:
-    for name in (
-        "Net Income",
-        "Net Income Common Stockholders",
-        "Net Income Applicable To Common Shares",
-    ):
-        if name in fin.index:
-            ni = fin.loc[name].dropna().sort_index(ascending=False)
-            break
-    else:
-        return "unknown"
-
-    vals = list(ni.values)
+def _eps_trend_from_vals(vals: list[float]) -> str:
     if len(vals) < 2:
         return "unknown"
 
@@ -116,6 +118,39 @@ def _eps_trend(fin: pd.DataFrame) -> str:
     if recent < 0:
         return "declining"
     return "stable"
+
+
+def _net_income_metrics(fin: pd.DataFrame) -> dict:
+    """eps_trend classification plus, when still loss-making, the YoY loss-narrowing %.
+
+    eps_loss_narrow_pct is only emitted when both the latest quarter and the
+    same quarter a year ago are losses (net income < 0); positive = loss shrank.
+    Falls back to sequential QoQ comparison when <5 quarters of data.
+    """
+    for name in (
+        "Net Income",
+        "Net Income Common Stockholders",
+        "Net Income Applicable To Common Shares",
+    ):
+        if name in fin.index:
+            ni = fin.loc[name].dropna().sort_index(ascending=False)
+            break
+    else:
+        return {"eps_trend": "unknown"}
+
+    vals = list(ni.values)
+    result: dict = {"eps_trend": _eps_trend_from_vals(vals)}
+
+    base = None
+    if len(vals) >= 5:
+        base = vals[4]
+    elif len(vals) >= 2:
+        base = vals[1]
+
+    if base is not None and vals[0] < 0 and base < 0:
+        result["eps_loss_narrow_pct"] = round((1 - abs(vals[0]) / abs(base)) * 100, 1)
+
+    return result
 
 
 def ma_metrics(closes: pd.Series) -> dict:
@@ -254,15 +289,41 @@ def fetch_benchmark() -> dict:
     return out
 
 
+def _live_price(t: "yf.Ticker") -> tuple[float | None, str | None]:
+    """Best-effort live/most-recent traded price, independent of daily-bar completeness.
+
+    Tries fast_info first (cheap), falls back to the slower .info dict.
+    Returns (price, source) — source is "fast_info" | "info" | None.
+    """
+    try:
+        fi = t.fast_info
+        lp = getattr(fi, "last_price", None)
+        if lp:
+            return float(lp), "fast_info"
+    except Exception:
+        pass
+    try:
+        rmp = t.info.get("regularMarketPrice")
+        if rmp:
+            return float(rmp), "info"
+    except Exception:
+        pass
+    return None, None
+
+
 def fetch_ticker(tk: str, mode: str = "scan", spy_closes: pd.Series | None = None) -> dict:
     try:
         t = yf.Ticker(tk)
 
         # Price history — MAs + gap detection
-        h = t.history(period="2y" if mode == "full" else "1y", interval="1d")
-        # Drop trailing rows with no Close (yfinance sometimes emits a phantom
-        # all-NaN row for the latest session, which poisons price/MA/RS).
-        h = h[h["Close"].notna()]
+        h_raw = t.history(period="2y" if mode == "full" else "1y", interval="1d")
+        # yfinance sometimes emits a phantom all-NaN row for the most recent
+        # session (daily bar not posted yet) — this silently made `price` and
+        # trend fields fall back to an earlier session with no indication.
+        # Detect it here so full mode can surface a live price instead of a
+        # stale one going unnoticed.
+        latest_bar_missing = len(h_raw) > 0 and bool(pd.isna(h_raw["Close"].iloc[-1]))
+        h = h_raw[h_raw["Close"].notna()]
         if len(h) < 10:
             return {"ticker": tk, "error": "insufficient price history"}
 
@@ -301,12 +362,12 @@ def fetch_ticker(tk: str, mode: str = "scan", spy_closes: pd.Series | None = Non
 
         # Quarterly fundamentals
         rev_metrics: dict = {}
-        eps_trend = "unknown"
+        ni_metrics: dict = {"eps_trend": "unknown"}
         try:
             fin = t.quarterly_financials
             if fin is not None and not fin.empty:
                 rev_metrics = _revenue_metrics(fin)
-                eps_trend = _eps_trend(fin)
+                ni_metrics = _net_income_metrics(fin)
         except Exception:
             pass
 
@@ -316,12 +377,22 @@ def fetch_ticker(tk: str, mode: str = "scan", spy_closes: pd.Series | None = Non
             "is_otc": is_otc,
             "market_cap_m": market_cap_m,
             "max_gap_up_pct": max_gap_up,
-            "eps_trend": eps_trend,
         }
+        result.update(ni_metrics)  # eps_trend / eps_loss_narrow_pct（后者仅仍亏损时给出）
         result.update(ma)  # ma50_pct / ma150_pct / ma200_pct / ma200_trend（各自可能省略）
         if inst_pct is not None:
             result["inst_pct"] = inst_pct
         result.update(rev_metrics)
+
+        # Confirmed-bar date + stale-data signal — in BOTH scan and full mode, since
+        # ma*_pct/max_gap_up_pct above are computed off the same (possibly lagging) h.
+        result["price_bar_date"] = h.index[-1].date().isoformat()
+        if latest_bar_missing:
+            result["latest_bar_missing"] = True
+            live, source = _live_price(t)
+            if live is not None:
+                result["live_price"] = round(live, 2)
+                result["live_price_source"] = source
 
         if mode == "full":
             closes = h["Close"]
@@ -436,10 +507,11 @@ def print_result(r: dict) -> None:
     trend = r.get("ma200_trend", "—")
     gap = f"{r['max_gap_up_pct']:+.1f}%"
     eps = r.get("eps_trend", "—")
+    narrow = f" narrow={r['eps_loss_narrow_pct']:+.1f}%" if "eps_loss_narrow_pct" in r else ""
     print(
         f"{r['ticker']:8s}{otc_flag:<6s} cap={cap:>10s}  "
         f"rev_yoy={yoy:>8s}{accel} consec={consec}  "
-        f"eps={eps:<14s} inst={inst:>6s}  "
+        f"eps={eps:<14s}{narrow} inst={inst:>6s}  "
         f"ma50={ma50:>7s} ma150={ma150:>7s} ma200={ma200:>7s} trend={trend:<5s} gap_up={gap}"
     )
 

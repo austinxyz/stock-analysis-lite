@@ -79,9 +79,13 @@ WebSearch: "[sector keyword] small cap stock NYSE Nasdaq 2025 2026 growth"
 python scripts/ticker_scan.py <全部候选 ticker> --json
 ```
 
-解析每行 JSON，存入 `scan_data` dict（key = ticker）。
+解析每行 JSON，存入 `scan_data` dict（key = ticker）。字段含 `price_bar_date`、`latest_bar_missing`、`live_price`/`live_price_source`（详见 `scripts/ticker_scan_guide.md`）。
 
 **OTC 即时排除**：`is_otc == true` 的 ticker 从候选池移除，记入筛除表（原因："OTC，非主板上市"）。
+
+**数据延迟检查**：若某 ticker 的 `latest_bar_missing == true`，说明 yfinance 最近一个交易日日线尚未补上，该 ticker 的 `ma50_pct`/`ma150_pct`/`ma200_pct`/`max_gap_up_pct` 实际基于 `price_bar_date` 那天（落后一个交易日），不是真正最新价。对比 `live_price` 与该滞后价的偏离幅度：
+- 偏离 <5% → 不影响本轮排名，正常继续
+- 偏离 ≥10%（尤其大跌）→ 在该 ticker 分析里标注"⚠️ 数据滞后：价格结构评分基于 {price_bar_date} 收盘价，实时价已偏离 Z%，需等日线更新后复核"，并将其标签降级/封顶为 👀观察（与 Stage 3 价格结构否决表同等优先级）
 
 ---
 
