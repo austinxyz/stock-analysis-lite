@@ -26,6 +26,7 @@ Claude Code → File → Open Folder → 选这个文件夹
 | `/stock-analyze <TICKER>` | 个股基本面 + 技术面深度分析 |
 | `/stock-entry <TICKER>` | 入场区间、止损位、仓位建议 |
 | `/stock-exit <TICKER>` | 止盈条件、减仓逻辑 |
+| `/stock-review <TICKER\|ALL>` | 平仓后复盘：三层打分（分析/纪律/结果），教训入 `wiki/lessons.md` |
 
 ## 参考资料
 

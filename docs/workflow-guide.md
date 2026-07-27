@@ -16,6 +16,8 @@
 /stock-entry TICKER     ← 入场：买哪里？止损在哪？买多少？
       ↓
 /stock-exit TICKER      ← 管理：什么时候减仓？什么时候止损？
+      ↓
+/stock-review TICKER    ← 复盘：分析对吗？纪律守了吗？教训进 lessons.md
 ```
 
 ---
@@ -244,3 +246,11 @@ A：运行 `/stock-exit`，它会根据当前价格和止损位给出具体建�
 
 **Q：gap-down 大跌，要等回补缺口再出吗？**
 A：不等。触发止损就当日收盘出，缺口不一定回补（美股热赛道股常从缺口一路继续跌）。
+
+---
+
+## 第五步：复盘 — `/stock-review`
+
+平仓后跑 `/stock-review TICKER`：三层打分（**分析质量 / 纪律执行 / 结果** 分开评，避免用盈亏倒推分析对错）；教训写入 `wiki/lessons.md`，下次 `/stock-entry`、`/stock-exit` 决策前自动做重犯检查。定期跑 `/stock-review ALL` 看重复错误模式。
+
+前提：真实成交要记在 `data/positions.md`（没记录的交易不能复盘）。
